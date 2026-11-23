@@ -3,90 +3,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Streaming Chat — Tanpa Login</title>
+    <title>Streaming Claude — Real-time</title>
+    <script src="https://js.puter.com/v2/"></script>
     <style>
         body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; background: #0b0b0d; color: #e8e8ea; }
         h1 { font-size: 22px; }
-        #out { white-space: pre-wrap; background: #1a1a1f; border: 1px solid #26262d; border-radius: 12px; padding: 16px; min-height: 100px; line-height: 1.6; }
-        .cursor { display: inline-block; width: 7px; height: 15px; background: #7c5cff; animation: b 1s steps(1) infinite; }
-        @keyframes b { 50% { opacity: 0; } }
+        .note { color: #8a8a93; font-size: 13px; }
         button { padding: 10px 20px; background: #7c5cff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
         button:disabled { opacity: .5; }
-        .note { color: #8a8a93; font-size: 13px; }
+        select { padding: 8px 10px; background: #1a1a1f; color: #e8e8ea; border: 1px solid #26262d; border-radius: 8px; margin-left: 8px; }
+        #out { white-space: pre-wrap; background: #1a1a1f; border: 1px solid #26262d; border-radius: 12px; padding: 16px; min-height: 120px; margin-top: 16px; line-height: 1.6; }
+        .cursor { display: inline-block; width: 7px; height: 15px; background: #7c5cff; animation: b 1s steps(1) infinite; }
+        @keyframes b { 50% { opacity: 0; } }
+        .meta { color: #8a8a93; font-size: 12px; margin-top: 8px; }
         a { color: #9d86ff; }
-        #meta { color: #8a8a93; font-size: 12px; margin-top: 8px; }
     </style>
 </head>
 <body>
-    <h1>◆ Streaming Response (real-time)</h1>
-    <p class="note">Tanpa login · SSE stream dari Pollinations · teks muncul kata per kata</p>
-    <button id="go">Stream: Rick and Morty</button>
+    <h1>◆ Streaming Claude (real-time)</h1>
+    <p class="note">Pola resmi: stream:true → for await → part?.text · butuh login Puter sekali</p>
+    <button id="go">Tulis essay AI</button>
+    <select id="model">
+        <option value="claude-sonnet-5-5" selected>claude-sonnet-5-5</option>
+        <option value="claude-haiku-5-5">claude-haiku-5-5</option>
+        <option value="claude-fable-5-2">claude-fable-5-2</option>
+        <option value="claude-opus-5-fast">claude-opus-5-fast</option>
+    </select>
     <div id="out"><span class="cursor"></span></div>
-    <div id="meta"></div>
-    <p><a href="index.html">← Kembali</a></p>
+    <div class="meta" id="meta"></div>
+    <p><a href="index.html">← Chat utama</a></p>
     <script>
         const out = document.getElementById('out');
         const go = document.getElementById('go');
         const meta = document.getElementById('meta');
+        const model = document.getElementById('model');
 
         go.onclick = async () => {
             go.disabled = true;
             out.innerHTML = '<span class="cursor"></span>';
-            meta.textContent = 'streaming…';
+            meta.textContent = 'login / stream…';
             const t0 = performance.now();
             let full = '';
             let chunks = 0;
             try {
-                const res = await fetch('https://text.pollinations.ai/openai', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: 'openai-fast',
-                        stream: true,
-                        messages: [{
-                            role: 'user',
-                            content: 'Tell me in detail what Rick and Morty is all about. 3 short paragraphs.',
-                        }],
-                    }),
-                });
-                if (!res.ok) {
-                    const t = await res.text();
-                    if (res.status === 402) throw new Error('Rate limit — tunggu ±45 detik.');
-                    throw new Error('API ' + res.status + ': ' + t.slice(0, 150));
+                if (!puter.auth.isSignedIn()) {
+                    await puter.auth.signIn();
                 }
-                const reader = res.body.getReader();
-                const dec = new TextDecoder();
-                let buf = '';
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    buf += dec.decode(value, { stream: true });
-                    const lines = buf.split('\n');
-                    buf = lines.pop() || '';
-                    for (const line of lines) {
-                        const t = line.trim();
-                        if (!t.startsWith('data:')) continue;
-                        const data = t.slice(5).trim();
-                        if (data === '[DONE]') continue;
-                        try {
-                            const j = JSON.parse(data);
-                            const c = j.choices?.[0]?.delta?.content || '';
-                            if (c) {
-                                full += c;
-                                chunks++;
-                                out.textContent = full;
-                                const cur = document.createElement('span');
-                                cur.className = 'cursor';
-                                out.appendChild(cur);
-                                meta.textContent = `chunks=${chunks} · ${((performance.now() - t0) / 1000).toFixed(1)}s`;
-                            }
-                        } catch {}
+                // === kode tutorial, persis ===
+                const response = await puter.ai.chat(
+                    "Write a detailed essay on the impact of artificial intelligence on society",
+                    { model: model.value, stream: true }
+                );
+
+                for await (const part of response) {
+                    const t = part?.text;
+                    if (t) {
+                        full += t;
+                        chunks++;
+                        out.textContent = full;
+                        const cur = document.createElement('span');
+                        cur.className = 'cursor';
+                        out.appendChild(cur);
+                        meta.textContent = `chunks=${chunks} · ${((performance.now() - t0) / 1000).toFixed(1)}s · ${model.value}`;
                     }
                 }
                 if (!full) throw new Error('Respons kosong');
-                meta.textContent = `Selesai · ${chunks} chunks · ${((performance.now() - t0) / 1000).toFixed(1)}s`;
+                meta.textContent = `Selesai · ${chunks} chunks · ${((performance.now() - t0) / 1000).toFixed(1)}s · ${model.value}`;
             } catch (e) {
-                out.textContent = 'Error: ' + e.message;
+                out.textContent = 'Error: ' + (e?.message || e?.error || e);
                 meta.textContent = '';
             } finally {
                 go.disabled = false;

@@ -3,22 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Puter AI — Chat</title>
+    <title>Claude AI — Chat</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://js.puter.com/v2/"></script>
 </head>
 <body>
     <div class="app">
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h1>AI Chat</h1>
+                <h1>Claude AI</h1>
                 <button id="newChatBtn" class="btn-new">+ Chat Baru</button>
             </div>
             <div class="model-box">
-                <label for="modelSelect">Model</label>
-                <select id="modelSelect">
-                    <option value="openai-fast" selected>openai-fast (gratis)</option>
-                    <option value="openai">openai</option>
-                </select>
+                <label for="modelSelect">Model Claude</label>
+                <select id="modelSelect"></select>
             </div>
             <div class="history" id="history"></div>
             <div class="feature-links">
@@ -33,21 +31,24 @@
                 <a href="resume.html">Resume</a>
                 <a href="speed.html">Speed test</a>
             </div>
-            <div class="sidebar-footer">Tanpa login · Pollinations AI</div>
+            <div class="sidebar-footer">Puter.js · User-Pays · Claude</div>
         </aside>
 
         <main class="chat">
             <div class="chat-header">
                 <span id="chatTitle">Chat Baru</span>
-                <span id="status" class="status">siap</span>
+                <div class="header-actions">
+                    <button type="button" id="loginBtn" class="btn-login">Login</button>
+                    <span id="status" class="status">siap</span>
+                </div>
             </div>
 
             <div class="messages" id="messages">
                 <div class="welcome" id="welcome">
                     <div class="welcome-icon">◆</div>
-                    <h2>Mulai percakapan</h2>
-                    <p>Ketik pesan lalu Kirim — <b>tanpa login</b>, langsung respon (streaming).<br>
-                    Gratis via Pollinations AI. Bisa ada batas rate limit ±45 detik.</p>
+                    <h2>Claude — real-time streaming</h2>
+                    <p>Klik <b>Login</b> (atau kirim pesan) → pop-up Puter → login sekali saja.<br>
+                    Respons Claude muncul <b>huruf per huruf</b> (streaming). Pilih model di sidebar.</p>
                 </div>
             </div>
 

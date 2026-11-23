@@ -1,6 +1,14 @@
 const SYSTEM_PROMPT = "You are a helpful assistant. Answer clearly and concisely. Reply in the user's language.";
-const API_URL = "https://text.pollinations.ai/openai";
-const MODEL = "openai-fast";
+
+const CLAUDE_MODELS = [
+    { id: "claude-sonnet-5-5", label: "claude-sonnet-5-5" },
+    { id: "claude-haiku-5-5", label: "claude-haiku-5-5" },
+    { id: "claude-opus-5-5", label: "claude-opus-5-5" },
+    { id: "claude-opus-5-fast", label: "claude-opus-5-fast" },
+    { id: "claude-fable-5-2", label: "claude-fable-5-2" },
+    { id: "claude-sonnet-4-6", label: "claude-sonnet-4-6" },
+    { id: "claude-opus-4-8", label: "claude-opus-4-8" },
+];
 
 const els = {
     messages: document.getElementById('messages'),
@@ -14,6 +22,7 @@ const els = {
     newChatBtn: document.getElementById('newChatBtn'),
     chatTitle: document.getElementById('chatTitle'),
     status: document.getElementById('status'),
+    loginBtn: document.getElementById('loginBtn'),
 };
 
 let chats = [];
@@ -96,76 +105,65 @@ function setStatus(text, busyState) {
     els.status.classList.toggle('busy', !!busyState);
 }
 
-async function streamChat(messages, onChunk, signal) {
-    const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            model: els.modelSelect.value || MODEL,
-            messages,
-            stream: true,
-        }),
-        signal,
-    });
-
-    if (!res.ok) {
-        let detail = '';
-        try { detail = (await res.text()).slice(0, 200); } catch {}
-        const err = new Error('API ' + res.status + (detail ? ': ' + detail : ''));
-        err.status = res.status;
-        throw err;
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = '';
-    let full = '';
-
-    while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buf += decoder.decode(value, { stream: true });
-        const lines = buf.split('\n');
-        buf = lines.pop() || '';
-
-        for (const line of lines) {
-            const t = line.trim();
-            if (!t.startsWith('data:')) continue;
-            const data = t.slice(5).trim();
-            if (data === '[DONE]') continue;
-            let json;
-            try { json = JSON.parse(data); } catch { continue; }
-            if (json.error) {
-                const e = new Error(json.error.message || 'stream error');
-                e.status = json.error.code;
-                throw e;
-            }
-            const chunk = json.choices?.[0]?.delta?.content || '';
-            if (chunk) {
-                full += chunk;
-                onChunk(full);
-            }
-        }
-    }
-
-    return full;
+function loginBtnLabel() {
+    let signed = false;
+    try { signed = !!(window.puter && puter.auth && puter.auth.isSignedIn()); } catch {}
+    els.loginBtn.textContent = signed ? '✓ Login' : 'Login';
+    els.loginBtn.classList.toggle('logged-in', signed);
 }
 
 function friendlyError(err) {
-    const msg = err?.message || String(err);
+    const msg = err?.message || err?.error || String(err);
     if (err?.name === 'AbortError') return 'Dihentikan.';
-    if (err?.status === 402 || msg.includes('FREE_LIMIT') || msg.includes('429')) {
-        return 'Batas gratis tercapai — tunggu ±45 detik lalu kirim lagi.';
+    if (String(msg).includes('popup_blocked')) {
+        return 'Pop-up login diblokir. Izinkan pop-up, lalu klik Login/Kirim lagi.';
     }
-    if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
-        return 'Jaringan gagal — cek koneksi internet.';
+    if (String(msg).includes('auth_window_closed')) return 'Login dibatalkan.';
+    if (String(msg).includes('unsupported_origin')) {
+        return 'Buka lewat http(s), bukan file://.';
+    }
+    if (String(msg).includes('402') || String(msg).includes('rate')) {
+        return 'Rate limit — tunggu sebentar lalu kirim lagi.';
     }
     return msg;
+}
+
+async function ensureAuth() {
+    if (location.protocol === 'file:') {
+        throw new Error('unsupported_origin');
+    }
+    try {
+        if (window.puter && puter.auth && puter.auth.isSignedIn()) return;
+    } catch {}
+
+    setStatus('login Puter diperlukan…', true);
+    // panggil langsung dari handler klik → pop-up tidak diblokir
+    await puter.auth.signIn();
+    loginBtnLabel();
 }
 
 async function send(text) {
     if (busy) return;
     const chat = activeChat();
+
+    try {
+        await ensureAuth();
+    } catch (err) {
+        const bubbleWrap = document.createElement('div');
+        bubbleWrap.className = 'msg assistant error';
+        const avatar = document.createElement('div');
+        avatar.className = 'avatar';
+        avatar.textContent = 'AI';
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.textContent = 'Error: ' + friendlyError(err);
+        bubbleWrap.append(avatar, bubble);
+        els.messages.appendChild(bubbleWrap);
+        chat.messages.push({ role: 'assistant', content: 'Error: ' + friendlyError(err), error: true });
+        save();
+        setStatus('siap', false);
+        return;
+    }
 
     chat.messages.push({ role: 'user', content: text });
     if (chat.messages.length === 1) {
@@ -200,13 +198,34 @@ async function send(text) {
     scrollBottom();
 
     currentAbort = new AbortController();
+    let full = '';
 
     try {
-        const full = await streamChat(history, (partial) => {
-            bubble.textContent = partial;
-            bubble.appendChild(cursor);
-            scrollBottom();
-        }, currentAbort.signal);
+        // === pola tutorial: stream + for await + part?.text ===
+        // messages array → signature (messages, testMode, options)
+        const response = await puter.ai.chat(
+            history,
+            false,
+            {
+                model: els.modelSelect.value || 'claude-sonnet-5-5',
+                stream: true,
+                signal: currentAbort.signal,
+            }
+        );
+
+        for await (const part of response) {
+            if (part && part.type === 'error') {
+                throw new Error(part.message || 'stream error');
+            }
+            const chunk = part?.text;
+            if (chunk) {
+                full += chunk;
+                bubble.textContent = full;
+                bubble.appendChild(cursor);
+                scrollBottom();
+                setStatus('streaming…', true);
+            }
+        }
 
         if (!full) throw new Error('Respons kosong dari model');
 
@@ -233,6 +252,7 @@ async function send(text) {
         els.abortBtn.hidden = true;
         els.input.focus();
         scrollBottom();
+        loginBtnLabel();
     }
 }
 
@@ -243,6 +263,17 @@ els.composer.addEventListener('submit', e => {
     els.input.value = '';
     els.input.style.height = 'auto';
     send(text);
+});
+
+els.loginBtn.addEventListener('click', async () => {
+    if (busy) return;
+    try {
+        await ensureAuth();
+        setStatus('login berhasil — siap kirim pesan', false);
+    } catch (err) {
+        setStatus('siap', false);
+        alert('Login: ' + friendlyError(err));
+    }
 });
 
 els.abortBtn.addEventListener('click', () => {
@@ -266,6 +297,16 @@ els.newChatBtn.addEventListener('click', () => {
     createChat(true);
 });
 
+// init model select
+els.modelSelect.innerHTML = '';
+for (const m of CLAUDE_MODELS) {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.label;
+    els.modelSelect.appendChild(opt);
+}
+
 load();
 renderHistory();
 renderMessages();
+loginBtnLabel();
