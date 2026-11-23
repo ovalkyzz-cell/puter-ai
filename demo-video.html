@@ -1,12 +1,85 @@
-<html>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Frame AI — Tanpa Login</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; background: #0b0b0d; color: #e8e8ea; }
+        h1 { font-size: 22px; }
+        video { max-width: 360px; border-radius: 12px; display: block; margin: 12px 0; border: 1px solid #26262d; }
+        canvas { max-width: 360px; border-radius: 12px; border: 1px solid #26262d; margin-top: 8px; display: none; }
+        #out { white-space: pre-wrap; background: #1a1a1f; border: 1px solid #26262d; border-radius: 12px; padding: 16px; min-height: 60px; margin-top: 12px; line-height: 1.6; }
+        button { padding: 10px 20px; background: #7c5cff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        button:disabled { opacity: .5; }
+        .note { color: #8a8a93; font-size: 13px; }
+        a { color: #9d86ff; }
+    </style>
+</head>
 <body>
-    <script src="https://js.puter.com/v2/"></script>
+    <h1>◆ Video → Analisis Frame</h1>
+    <p class="note">Tanpa login · Ambil 1 frame dari video lalu AI mendeskripsikannya (aiautotagging)</p>
+    <video id="vid" src="https://assets.puter.site/puppy.mp4" controls crossorigin="anonymous"></video>
+    <canvas id="cv" width="640" height="360"></canvas>
+    <div style="margin-top:12px">
+        <button id="go">Analisis Frame Video</button>
+    </div>
+    <div id="out">Klik tombol — frame detik ke-1 akan diekstrak lalu dianalisis AI.</div>
+    <p><a href="index.html">← Kembali</a></p>
     <script>
-        puter.ai
-            .chat(`What do you see?`, `https://assets.puter.site/puppy.mp4`, {
-                model: "reka/reka-edge",
-            })
-            .then(puter.print);
+        const vid = document.getElementById('vid');
+        const cv = document.getElementById('cv');
+        const out = document.getElementById('out');
+        const go = document.getElementById('go');
+        const ctx = cv.getContext('2d');
+
+        go.onclick = async () => {
+            go.disabled = true;
+            out.textContent = 'Ekstrak frame…';
+            try {
+                if (vid.readyState < 2) {
+                    await new Promise((res, rej) => {
+                        vid.onloadeddata = res;
+                        vid.onerror = () => rej(new Error('Video gagal dimuat'));
+                        setTimeout(() => rej(new Error('Timeout muat video')), 20000);
+                    });
+                }
+                vid.pause();
+                vid.currentTime = Math.min(1, (vid.duration || 2) / 2);
+                await new Promise(res => {
+                    vid.onseeked = res;
+                    setTimeout(res, 3000);
+                });
+                ctx.drawImage(vid, 0, 0, cv.width, cv.height);
+                cv.style.display = 'block';
+
+                const blob = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.9));
+                if (!blob) throw new Error('Gagal ambil frame (canvas kosong)');
+
+                out.textContent = 'Kirim frame ke AI… (±10–20 detik)';
+                const fd = new FormData();
+                fd.append('file', blob, 'frame.jpg');
+                fd.append('options', JSON.stringify({ maxTags: 10 }));
+                const r = await fetch('https://aiautotagging.com/api/tag/image', { method: 'POST', body: fd });
+                const text = await r.text();
+                if (!r.ok) throw new Error('API ' + r.status + ': ' + text.slice(0, 150));
+
+                let result = text;
+                try {
+                    const j = JSON.parse(text);
+                    if (j.raw) {
+                        const m = j.raw.match(/Image description:\s*([\s\S]+?)(?:\n\nHere is my approach|\n```|$)/i);
+                        result = m ? m[1].trim() : j.raw.slice(0, 700);
+                    } else if (j.code) throw new Error(j.message || j.code);
+                } catch (e) { if (e.message && !e.message.includes('JSON') && !e.message.includes('Unexpected')) throw e; }
+
+                out.textContent = 'Hasil analisis frame:\n\n' + result;
+            } catch (e) {
+                out.textContent = 'Error: ' + e.message;
+            } finally {
+                go.disabled = false;
+            }
+        };
     </script>
 </body>
 </html>

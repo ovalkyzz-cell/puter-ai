@@ -1,47 +1,95 @@
-<html>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Gen + Edit — Tanpa Login</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; background: #0b0b0d; color: #e8e8ea; }
+        h1 { font-size: 22px; }
+        .note { color: #8a8a93; font-size: 13px; }
+        input { width: 100%; padding: 10px 12px; background: #1a1a1f; border: 1px solid #26262d; border-radius: 8px; color: #e8e8ea; font-size: 14px; margin-bottom: 10px; box-sizing: border-box; }
+        button { padding: 10px 20px; background: #7c5cff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-right: 8px; }
+        button:disabled { opacity: .5; }
+        .row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
+        .card { flex: 1; min-width: 280px; }
+        .card h3 { font-size: 14px; color: #9d86ff; margin-bottom: 8px; }
+        .card img { width: 100%; border-radius: 12px; border: 1px solid #26262d; min-height: 120px; background: #1a1a1f; }
+        #status { color: #8a8a93; font-size: 13px; margin-top: 10px; }
+        a { color: #9d86ff; }
+    </style>
+</head>
 <body>
-    <script src="https://js.puter.com/v2/"></script>
+    <h1>◆ Generate + Edit Gambar</h1>
+    <p class="note">Tanpa login · image.pollinations.ai · satu gambar per ±45 detik</p>
+    <label>Prompt gambar:</label>
+    <input id="p1" value="A simple infographic about photosynthesis, clean flat design" />
+    <label>Edit (translate etc):</label>
+    <input id="p2" value="Translate all text in this image to Spanish. Keep everything else the same." />
+    <button id="gen">1. Generate</button>
+    <button id="edit" disabled>2. Edit ke Spanyol</button>
+    <div id="status">Langkah 1 dulu.</div>
+    <div class="row">
+        <div class="card"><h3>Hasil generate</h3><img id="img1" alt="generated" /></div>
+        <div class="card"><h3>Hasil edit</h3><img id="img2" alt="edited" /></div>
+    </div>
+    <p><a href="index.html">← Kembali</a></p>
     <script>
-    (async () => {
-        const model = "gemini-3.1-flash-image-preview";
+        const img1 = document.getElementById('img1');
+        const img2 = document.getElementById('img2');
+        const status = document.getElementById('status');
+        const gen = document.getElementById('gen');
+        const edit = document.getElementById('edit');
+        let url1 = '';
 
-        // Step 1: Generate initial image
-        puter.print("Step 1: Generating infographic...<br>");
-        const r1 = await puter.ai.chat("Create a simple infographic about photosynthesis", {
-            model,
-            image_config: { image_size: "1K" },
-        });
-        const img1 = r1.message.images?.[0]?.image_url?.url;
-        const thoughtSignature1 = r1.message.images?.[0]?.thoughtSignature;
-        if (img1) {
-            const el = document.createElement("img");
-            el.src = img1;
-            el.style.maxWidth = "512px";
-            document.body.appendChild(el);
+        function imageUrl(prompt, seed) {
+            const p = encodeURIComponent(prompt);
+            return `https://image.pollinations.ai/prompt/${p}?width=768&height=768&seed=${seed}&nologo=true`;
         }
 
-        // Step 2: Edit the image in a follow-up turn
-        puter.print("<br>Step 2: Translating to Spanish...<br>");
-        const r2 = await puter.ai.chat([
-            { role: "user", content: "Create a simple infographic about photosynthesis" },
-            { role: "assistant", content: [
-                { type: "text", text: r1.message.content },
-                { type: "image_url", image_url: { url: img1 }, thoughtSignature: thoughtSignature1 },
-            ]},
-            { role: "user", content: "Translate all text to Spanish. Keep everything else the same." },
-        ], {
-            model,
-            image_config: { aspect_ratio: "16:9", image_size: "2K" },
-        });
-        const img2 = r2.message.images?.[0]?.image_url?.url;
-        if (img2) {
-            const el = document.createElement("img");
-            el.src = img2;
-            el.style.maxWidth = "512px";
-            document.body.appendChild(el);
+        function loadImage(url) {
+            return new Promise((res, rej) => {
+                const im = new Image();
+                im.onload = () => res(im);
+                im.onerror = () => rej(new Error('Gagal muat gambar'));
+                im.src = url;
+            });
         }
-        puter.print("<br>Done!");
-    })();
+
+        gen.onclick = async () => {
+            gen.disabled = true;
+            status.textContent = 'Generate… (bisa 10–30 detik)';
+            try {
+                const seed = Date.now() % 100000;
+                url1 = imageUrl(document.getElementById('p1').value, seed);
+                await loadImage(url1);
+                img1.src = url1;
+                status.textContent = 'Generate OK. Tunggu ±45 detik sebelum Edit (limit gratis).';
+                edit.disabled = false;
+                setTimeout(() => { status.textContent = 'Slot edit siap — klik tombol 2.'; }, 46000);
+            } catch (e) {
+                status.textContent = 'Error: ' + e.message;
+            } finally {
+                gen.disabled = false;
+            }
+        };
+
+        edit.onclick = async () => {
+            edit.disabled = true;
+            status.textContent = 'Edit… (butuh gambar asli di input — di sini kami pakai prompt edit sebagai gambar baru karena API klasik tidak menerima image-to-image).';
+            try {
+                const p2 = document.getElementById('p2').value + ' | based on: ' + document.getElementById('p1').value;
+                const seed = (Date.now() % 100000) + 7;
+                const url = imageUrl(p2, seed);
+                await loadImage(url);
+                img2.src = url;
+                status.textContent = 'Selesai. Catatan: API gratis = text-to-image; edit penuh (image-to-image) butuh model berbayar/berkey.';
+            } catch (e) {
+                status.textContent = 'Error: ' + e.message;
+            } finally {
+                edit.disabled = false;
+            }
+        };
     </script>
 </body>
 </html>

@@ -1,8 +1,53 @@
-<html>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Chat — Tanpa Login</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; background: #0b0b0d; color: #e8e8ea; }
+        h1 { font-size: 22px; }
+        #out { white-space: pre-wrap; background: #1a1a1f; border: 1px solid #26262d; border-radius: 12px; padding: 16px; min-height: 80px; margin-top: 16px; line-height: 1.6; }
+        button { padding: 10px 20px; background: #7c5cff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        button:disabled { opacity: .5; cursor: not-allowed; }
+        .note { color: #8a8a93; font-size: 13px; margin-top: 8px; }
+        a { color: #9d86ff; }
+    </style>
+</head>
 <body>
-    <script src="https://js.puter.com/v2/"></script>
+    <h1>◆ Simple Chat</h1>
+    <p class="note">Tanpa login · Pollinations AI · bisa ada rate limit ±45 detik</p>
+    <button id="go">Tanya: What is life?</button>
+    <div id="out">Menunggu…</div>
+    <p><a href="index.html">← Kembali ke chat utama</a></p>
     <script>
-        puter.ai.chat(`What is life?`, { model: "gpt-6-luna" }).then(puter.print);
+        const out = document.getElementById('out');
+        const go = document.getElementById('go');
+        go.onclick = async () => {
+            go.disabled = true;
+            out.textContent = 'Memanggil AI…';
+            try {
+                const res = await fetch('https://text.pollinations.ai/openai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'openai-fast',
+                        messages: [{ role: 'user', content: 'What is life? Answer in 2-3 sentences.' }],
+                    }),
+                });
+                if (!res.ok) {
+                    const t = await res.text();
+                    if (res.status === 402) throw new Error('Rate limit — tunggu ±45 detik lalu coba lagi.');
+                    throw new Error('API ' + res.status + ': ' + t.slice(0, 150));
+                }
+                const data = await res.json();
+                out.textContent = data.choices?.[0]?.message?.content || JSON.stringify(data).slice(0, 400);
+            } catch (e) {
+                out.textContent = 'Error: ' + e.message;
+            } finally {
+                go.disabled = false;
+            }
+        };
     </script>
 </body>
 </html>

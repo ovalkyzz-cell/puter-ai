@@ -1,14 +1,75 @@
-<html>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Search + AI — Tanpa Login</title>
+    <style>
+        body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; background: #0b0b0d; color: #e8e8ea; }
+        h1 { font-size: 22px; }
+        input, textarea { width: 100%; padding: 10px 12px; background: #1a1a1f; border: 1px solid #26262d; border-radius: 8px; color: #e8e8ea; font-size: 14px; margin-bottom: 10px; box-sizing: border-box; }
+        button { padding: 10px 20px; background: #7c5cff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+        button:disabled { opacity: .5; }
+        #out { white-space: pre-wrap; background: #1a1a1f; border: 1px solid #26262d; border-radius: 12px; padding: 16px; min-height: 80px; margin-top: 12px; line-height: 1.6; }
+        .note { color: #8a8a93; font-size: 13px; }
+        a { color: #9d86ff; }
+        #src { color: #8a8a93; font-size: 12px; margin-top: 8px; word-break: break-all; }
+    </style>
+</head>
 <body>
-    <script src="https://js.puter.com/v2/"></script>
+    <h1>◆ Web Search + Ringkas AI</h1>
+    <p class="note">Tanpa login · Ambil halaman live via r.jina.ai lalu diringkas Pollinations</p>
+    <label>URL yang akan dibaca:</label>
+    <input id="url" value="https://docs.puter.com/user-pays-model/" />
+    <label>Pertanyaan:</label>
+    <input id="q" value="Summarize what the User-Pays Model is, in 3 sentences." />
+    <button id="go">Fetch + Ringkas</button>
+    <div id="out">Isi URL lalu klik tombol.</div>
+    <div id="src"></div>
+    <p><a href="index.html">← Kembali</a></p>
     <script>
-        puter.print(`Loading...`);
-        puter.ai
-            .chat("Summarize what the User-Pays Model is: https://docs.puter.com/user-pays-model/", {
-                model: "openai/gpt-6-luna",
-                tools: [{ type: "web_search" }],
-            })
-            .then(puter.print);
+        const out = document.getElementById('out');
+        const src = document.getElementById('src');
+        const go = document.getElementById('go');
+
+        go.onclick = async () => {
+            go.disabled = true;
+            const url = document.getElementById('url').value.trim();
+            const q = document.getElementById('q').value.trim();
+            out.textContent = 'Mengambil halaman…';
+            src.textContent = '';
+            try {
+                const pageRes = await fetch('https://r.jina.ai/' + url);
+                if (!pageRes.ok) throw new Error('Fetch gagal: ' + pageRes.status);
+                let page = await pageRes.text();
+                if (page.length > 6000) page = page.slice(0, 6000) + '\n\n[truncated]';
+                src.textContent = 'Sumber: ' + url + ' (' + page.length + ' chars)';
+
+                out.textContent = 'Merangkum dengan AI…';
+                const aiRes = await fetch('https://text.pollinations.ai/openai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'openai-fast',
+                        messages: [
+                            { role: 'system', content: 'You summarize web pages accurately and briefly.' },
+                            { role: 'user', content: q + '\n\n--- PAGE CONTENT ---\n' + page },
+                        ],
+                    }),
+                });
+                if (!aiRes.ok) {
+                    const t = await aiRes.text();
+                    if (aiRes.status === 402) throw new Error('Rate limit AI — tunggu ±45 detik (fetch halaman sudah berhasil).');
+                    throw new Error('AI ' + aiRes.status + ': ' + t.slice(0, 150));
+                }
+                const data = await aiRes.json();
+                out.textContent = data.choices?.[0]?.message?.content || JSON.stringify(data).slice(0, 400);
+            } catch (e) {
+                out.textContent = 'Error: ' + e.message;
+            } finally {
+                go.disabled = false;
+            }
+        };
     </script>
 </body>
 </html>
