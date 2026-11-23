@@ -93,6 +93,23 @@ function msgNode(role, content, isError) {
     bubble.className = 'bubble';
     bubble.textContent = content;
     div.append(avatar, bubble);
+
+    // tombol dengar (Web Speech API — tanpa login)
+    if (role === 'assistant' && !isError && content) {
+        const speak = document.createElement('button');
+        speak.type = 'button';
+        speak.className = 'btn-speak';
+        speak.title = 'Dengarkan';
+        speak.textContent = '🔊';
+        speak.onclick = (e) => {
+            e.stopPropagation();
+            speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(content);
+            u.lang = 'id-ID';
+            speechSynthesis.speak(u);
+        };
+        div.appendChild(speak);
+    }
     return div;
 }
 
