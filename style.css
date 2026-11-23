@@ -196,6 +196,19 @@ body {
 }
 .composer button:hover { background: var(--accent-2); }
 .composer button:disabled { opacity: .5; cursor: not-allowed; }
+.btn-abort {
+    padding: 0 16px;
+    background: #5a2a2a;
+    color: #ffb0b0;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    align-self: flex-end;
+    height: 46px;
+}
+.btn-abort:hover { background: #7a3a3a; }
 
 /* Responsive */
 @media (max-width: 760px) {

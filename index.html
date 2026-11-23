@@ -5,48 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Puter AI — Chat</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://js.puter.com/v2/"></script>
 </head>
 <body>
     <div class="app">
         <aside class="sidebar">
             <div class="sidebar-header">
-                <h1>Puter AI</h1>
+                <h1>AI Chat</h1>
                 <button id="newChatBtn" class="btn-new">+ Chat Baru</button>
             </div>
             <div class="model-box">
                 <label for="modelSelect">Model</label>
                 <select id="modelSelect">
-                    <option value="gpt-5.4-nano" selected>gpt-5.4-nano (default)</option>
-                    <option value="gpt-6-luna">gpt-6-luna</option>
-                    <option value="claude-sonnet-4-6">claude-sonnet-4-6</option>
-                    <option value="gemini-3.5-flash-lite">gemini-3.5-flash-lite</option>
+                    <option value="openai-fast" selected>openai-fast (gratis)</option>
+                    <option value="openai">openai</option>
                 </select>
             </div>
             <div class="history" id="history"></div>
-            <div class="sidebar-footer">User-Pays via Puter.js</div>
+            <div class="sidebar-footer">Tanpa login · Pollinations AI</div>
         </aside>
 
         <main class="chat">
             <div class="chat-header">
                 <span id="chatTitle">Chat Baru</span>
-                <div class="header-actions">
-                    <button type="button" id="loginBtn" class="btn-login">Login</button>
-                    <span id="status" class="status">siap</span>
-                </div>
+                <span id="status" class="status">siap</span>
             </div>
 
             <div class="messages" id="messages">
                 <div class="welcome" id="welcome">
                     <div class="welcome-icon">◆</div>
                     <h2>Mulai percakapan</h2>
-                    <p>Klik <b>Login</b> (atau kirim pesan langsung) → pop-up Puter muncul → login sekali saja.<br>
-                    Setelah itu AI langsung merespon. Butuh koneksi internet.</p>
+                    <p>Ketik pesan lalu Kirim — <b>tanpa login</b>, langsung respon (streaming).<br>
+                    Gratis via Pollinations AI. Bisa ada batas rate limit ±45 detik.</p>
                 </div>
             </div>
 
             <form class="composer" id="composer">
                 <textarea id="input" rows="1" placeholder="Ketik pesan..." required></textarea>
+                <button type="button" id="abortBtn" class="btn-abort" hidden>Stop</button>
                 <button type="submit" id="sendBtn">Kirim</button>
             </form>
         </main>

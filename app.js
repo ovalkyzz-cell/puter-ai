@@ -1,4 +1,6 @@
 const SYSTEM_PROMPT = "You are a helpful assistant. Answer clearly and concisely. Reply in the user's language.";
+const API_URL = "https://text.pollinations.ai/openai";
+const MODEL = "openai-fast";
 
 const els = {
     messages: document.getElementById('messages'),
@@ -6,17 +8,18 @@ const els = {
     composer: document.getElementById('composer'),
     input: document.getElementById('input'),
     sendBtn: document.getElementById('sendBtn'),
+    abortBtn: document.getElementById('abortBtn'),
     modelSelect: document.getElementById('modelSelect'),
     history: document.getElementById('history'),
     newChatBtn: document.getElementById('newChatBtn'),
     chatTitle: document.getElementById('chatTitle'),
     status: document.getElementById('status'),
-    loginBtn: document.getElementById('loginBtn'),
 };
 
 let chats = [];
 let activeId = null;
 let busy = false;
+let currentAbort = null;
 
 function load() {
     try {
@@ -93,47 +96,71 @@ function setStatus(text, busyState) {
     els.status.classList.toggle('busy', !!busyState);
 }
 
-function showError(text) {
-    const chat = activeChat();
-    chat.messages.push({ role: 'assistant', content: text, error: true });
-    save();
-    renderMessages();
-}
+async function streamChat(messages, onChunk, signal) {
+    const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            model: els.modelSelect.value || MODEL,
+            messages,
+            stream: true,
+        }),
+        signal,
+    });
 
-function isFileProtocol() {
-    return location.protocol === 'file:';
-}
-
-function loginBtnLabel() {
-    let signed = false;
-    try { signed = !!(puter.auth && puter.auth.isSignedIn()); } catch {}
-    els.loginBtn.textContent = signed ? '✓ Login' : 'Login';
-    els.loginBtn.classList.toggle('logged-in', signed);
-}
-
-async function ensureAuth() {
-    if (isFileProtocol()) {
-        showError('Halaman dibuka sebagai file:// — Puter butuh http(s). Jalankan: python3 -m http.server 8000 --directory puter-ai lalu buka http://localhost:8000');
-        throw new Error('unsupported_origin');
-    }
-    try {
-        if (puter.auth && puter.auth.isSignedIn()) return;
-    } catch {}
-
-    setStatus('login Puter diperlukan…', true);
-    try {
-        // panggil langsung dari handler klik → popup tidak diblokir browser
-        await puter.auth.signIn();
-    } catch (err) {
-        const code = err?.error || err?.message || String(err);
-        if (String(code).includes('popup_blocked')) {
-            showError('Pop-up diblokir browser. Izinkan pop-up untuk situs ini, lalu klik Kirim lagi (atau tombol Login).');
-        } else {
-            showError('Login gagal: ' + String(code));
-        }
+    if (!res.ok) {
+        let detail = '';
+        try { detail = (await res.text()).slice(0, 200); } catch {}
+        const err = new Error('API ' + res.status + (detail ? ': ' + detail : ''));
+        err.status = res.status;
         throw err;
     }
-    loginBtnLabel();
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    let full = '';
+
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buf += decoder.decode(value, { stream: true });
+        const lines = buf.split('\n');
+        buf = lines.pop() || '';
+
+        for (const line of lines) {
+            const t = line.trim();
+            if (!t.startsWith('data:')) continue;
+            const data = t.slice(5).trim();
+            if (data === '[DONE]') continue;
+            let json;
+            try { json = JSON.parse(data); } catch { continue; }
+            if (json.error) {
+                const e = new Error(json.error.message || 'stream error');
+                e.status = json.error.code;
+                throw e;
+            }
+            const chunk = json.choices?.[0]?.delta?.content || '';
+            if (chunk) {
+                full += chunk;
+                onChunk(full);
+            }
+        }
+    }
+
+    return full;
+}
+
+function friendlyError(err) {
+    const msg = err?.message || String(err);
+    if (err?.name === 'AbortError') return 'Dihentikan.';
+    if (err?.status === 402 || msg.includes('FREE_LIMIT') || msg.includes('429')) {
+        return 'Batas gratis tercapai — tunggu ±45 detik lalu kirim lagi.';
+    }
+    if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+        return 'Jaringan gagal — cek koneksi internet.';
+    }
+    return msg;
 }
 
 async function send(text) {
@@ -150,6 +177,7 @@ async function send(text) {
 
     busy = true;
     els.sendBtn.disabled = true;
+    els.abortBtn.hidden = false;
     setStatus('berpikir…', true);
 
     const history = [
@@ -171,73 +199,54 @@ async function send(text) {
     els.messages.appendChild(bubbleWrap);
     scrollBottom();
 
-    let full = '';
-    try {
-        const resp = await puter.ai.chat(history, true, {
-            model: els.modelSelect.value,
-            stream: true,
-        });
+    currentAbort = new AbortController();
 
-        for await (const part of resp) {
-            if (part && part.type === 'error') throw new Error(part.message || 'stream error');
-            const chunk = part?.text || part?.message?.content || '';
-            if (chunk) {
-                full += chunk;
-                bubble.textContent = full;
-                bubble.appendChild(cursor);
-                scrollBottom();
-            }
-        }
+    try {
+        const full = await streamChat(history, (partial) => {
+            bubble.textContent = partial;
+            bubble.appendChild(cursor);
+            scrollBottom();
+        }, currentAbort.signal);
 
         if (!full) throw new Error('Respons kosong dari model');
 
         chat.messages.push({ role: 'assistant', content: full });
         save();
+        setStatus('siap', false);
     } catch (err) {
-        bubble.textContent = 'Error: ' + (err?.message || err);
-        bubbleWrap.classList.add('error');
-        chat.messages.push({
-            role: 'assistant',
-            content: 'Error: ' + (err?.message || String(err)),
-            error: true,
-        });
-        save();
+        const msg = friendlyError(err);
+        if (err?.name === 'AbortError' && bubble.textContent.trim()) {
+            chat.messages.push({ role: 'assistant', content: bubble.textContent });
+            save();
+            setStatus('dihentikan', false);
+        } else {
+            bubble.textContent = 'Error: ' + msg;
+            bubbleWrap.classList.add('error');
+            chat.messages.push({ role: 'assistant', content: 'Error: ' + msg, error: true });
+            save();
+            setStatus('siap', false);
+        }
     } finally {
         busy = false;
+        currentAbort = null;
         els.sendBtn.disabled = false;
-        setStatus('siap', false);
+        els.abortBtn.hidden = true;
         els.input.focus();
         scrollBottom();
     }
 }
 
-els.composer.addEventListener('submit', async e => {
+els.composer.addEventListener('submit', e => {
     e.preventDefault();
     const text = els.input.value.trim();
     if (!text || busy) return;
-
-    try {
-        await ensureAuth();
-    } catch {
-        els.input.value = '';
-        els.input.style.height = 'auto';
-        setStatus('siap', false);
-        return;
-    }
-
     els.input.value = '';
     els.input.style.height = 'auto';
     send(text);
 });
 
-els.loginBtn.addEventListener('click', async () => {
-    if (busy) return;
-    try {
-        await ensureAuth();
-        setStatus('login berhasil — siap kirim pesan', false);
-    } catch {
-        setStatus('siap', false);
-    }
+els.abortBtn.addEventListener('click', () => {
+    if (currentAbort) currentAbort.abort();
 });
 
 els.input.addEventListener('keydown', e => {
@@ -260,7 +269,3 @@ els.newChatBtn.addEventListener('click', () => {
 load();
 renderHistory();
 renderMessages();
-loginBtnLabel();
-if (isFileProtocol()) {
-    showError('Buka lewat http(s), bukan file:// — contoh: python3 -m http.server 8000 di folder ini, lalu http://localhost:8000');
-}
