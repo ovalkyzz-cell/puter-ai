@@ -11,6 +11,7 @@ const els = {
     newChatBtn: document.getElementById('newChatBtn'),
     chatTitle: document.getElementById('chatTitle'),
     status: document.getElementById('status'),
+    loginBtn: document.getElementById('loginBtn'),
 };
 
 let chats = [];
@@ -92,6 +93,49 @@ function setStatus(text, busyState) {
     els.status.classList.toggle('busy', !!busyState);
 }
 
+function showError(text) {
+    const chat = activeChat();
+    chat.messages.push({ role: 'assistant', content: text, error: true });
+    save();
+    renderMessages();
+}
+
+function isFileProtocol() {
+    return location.protocol === 'file:';
+}
+
+function loginBtnLabel() {
+    let signed = false;
+    try { signed = !!(puter.auth && puter.auth.isSignedIn()); } catch {}
+    els.loginBtn.textContent = signed ? '✓ Login' : 'Login';
+    els.loginBtn.classList.toggle('logged-in', signed);
+}
+
+async function ensureAuth() {
+    if (isFileProtocol()) {
+        showError('Halaman dibuka sebagai file:// — Puter butuh http(s). Jalankan: python3 -m http.server 8000 --directory puter-ai lalu buka http://localhost:8000');
+        throw new Error('unsupported_origin');
+    }
+    try {
+        if (puter.auth && puter.auth.isSignedIn()) return;
+    } catch {}
+
+    setStatus('login Puter diperlukan…', true);
+    try {
+        // panggil langsung dari handler klik → popup tidak diblokir browser
+        await puter.auth.signIn();
+    } catch (err) {
+        const code = err?.error || err?.message || String(err);
+        if (String(code).includes('popup_blocked')) {
+            showError('Pop-up diblokir browser. Izinkan pop-up untuk situs ini, lalu klik Kirim lagi (atau tombol Login).');
+        } else {
+            showError('Login gagal: ' + String(code));
+        }
+        throw err;
+    }
+    loginBtnLabel();
+}
+
 async function send(text) {
     if (busy) return;
     const chat = activeChat();
@@ -167,13 +211,33 @@ async function send(text) {
     }
 }
 
-els.composer.addEventListener('submit', e => {
+els.composer.addEventListener('submit', async e => {
     e.preventDefault();
     const text = els.input.value.trim();
     if (!text || busy) return;
+
+    try {
+        await ensureAuth();
+    } catch {
+        els.input.value = '';
+        els.input.style.height = 'auto';
+        setStatus('siap', false);
+        return;
+    }
+
     els.input.value = '';
     els.input.style.height = 'auto';
     send(text);
+});
+
+els.loginBtn.addEventListener('click', async () => {
+    if (busy) return;
+    try {
+        await ensureAuth();
+        setStatus('login berhasil — siap kirim pesan', false);
+    } catch {
+        setStatus('siap', false);
+    }
 });
 
 els.input.addEventListener('keydown', e => {
@@ -196,3 +260,7 @@ els.newChatBtn.addEventListener('click', () => {
 load();
 renderHistory();
 renderMessages();
+loginBtnLabel();
+if (isFileProtocol()) {
+    showError('Buka lewat http(s), bukan file:// — contoh: python3 -m http.server 8000 di folder ini, lalu http://localhost:8000');
+}
