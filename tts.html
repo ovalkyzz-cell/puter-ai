@@ -3,235 +3,192 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text-to-Speech</title>
-    <script src="https://js.puter.com/v2/"></script>
+    <title>Text-to-Speech — Gratis</title>
     <style>
         body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; background: #0b0b0d; color: #e8e8ea; }
         h1 { font-size: 22px; }
         .note { color: #8a8a93; font-size: 13px; }
-        textarea { width: 100%; height: 100px; padding: 12px; background: #1a1a1f; border: 1px solid #26262d; border-radius: 10px; color: #e8e8ea; font-size: 14px; box-sizing: border-box; margin-bottom: 12px; }
-        .row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+        .note b { color: #9d86ff; }
+        textarea {
+            width: 100%; height: 110px; padding: 12px;
+            background: #1a1a1f; border: 1px solid #26262d; border-radius: 10px;
+            color: #e8e8ea; font-size: 15px; box-sizing: border-box; margin-bottom: 14px;
+            font-family: inherit;
+        }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 14px; }
+        .field label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: #8a8a93; margin-bottom: 5px; }
+        select, input[type=range] { width: 100%; box-sizing: border-box; }
         select { padding: 10px 12px; background: #1a1a1f; color: #e8e8ea; border: 1px solid #26262d; border-radius: 8px; font-size: 14px; }
-        button { padding: 12px 22px; background: #7c5cff; color: #fff; border: none; border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px; }
+        .val { font-size: 12px; color: #9d86ff; }
+        .btns { display: flex; gap: 10px; flex-wrap: wrap; }
+        button {
+            padding: 13px 26px; background: #7c5cff; color: #fff; border: none;
+            border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px;
+        }
         button:disabled { opacity: .5; cursor: not-allowed; }
-        button.secondary { background: #2a2a33; }
-        .status { margin-top: 14px; padding: 12px 14px; background: #1a1a1f; border: 1px solid #26262d; border-radius: 10px; color: #8a8a93; font-size: 13px; min-height: 44px; white-space: pre-wrap; }
-        .engines { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
-        .engines button { font-size: 13px; padding: 8px 14px; }
-        .engines button.active { outline: 2px solid #9d86ff; }
+        button.secondary { background: #2a2a33; color: #ccc; }
+        button.danger { background: #5a2a2a; color: #ffb0b0; }
+        .status {
+            margin-top: 16px; padding: 12px 14px; background: #1a1a1f;
+            border: 1px solid #26262d; border-radius: 10px; color: #8a8a93;
+            font-size: 13px; min-height: 44px; white-space: pre-wrap;
+        }
+        .presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+        .presets button { font-size: 13px; padding: 7px 12px; background: #20202a; color: #ccc; }
+        .presets button:hover { border-color: #7c5cff; }
         a { color: #9d86ff; }
-        label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: #8a8a93; margin-bottom: 4px; }
-        .field { margin-bottom: 10px; }
+        .badge { display: inline-block; background: #1f6f43; color: #b8f5d4; font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 700; margin-left: 8px; vertical-align: middle; }
     </style>
 </head>
 <body>
-    <h1>◆ Text-to-Speech</h1>
+    <h1>◆ Text-to-Speech <span class="badge">GRATIS · TANPA LOGIN</span></h1>
     <p class="note">
-        <b>Gratis tanpa login:</b> suara browser (Web Speech API).<br>
-        <b>Puter (login):</b> neural/generative + provider Gemini, xAI, Speechify — pola tutorial resmi.
+        Web Speech API browser — <b>benar-benar gratis</b>, tanpa API key, tanpa balance, tanpa limit, langsung jalan.
     </p>
 
-    <textarea id="text-input">Hello! Ini contoh text-to-speech. Selamat datang di aplikasi AI kami.</textarea>
+    <div class="presets">
+        <button type="button" data-t="Hello! This is free text to speech.">EN: Hello</button>
+        <button type="button" data-t="Halo! Ini suara teks ke ucapan gratis.">ID: Halo</button>
+        <button type="button" data-t="Bonjour le monde!">FR: Bonjour</button>
+        <button type="button" data-t="Hola, ¿cómo estás?">ES: Hola</button>
+        <button type="button" data-t="Guten Tag, wie geht es Ihnen?">DE: Guten Tag</button>
+    </div>
 
-    <div class="row">
+    <textarea id="text-input">Halo! Ini text-to-speech gratis tanpa login dan tanpa balance. Selamat datang di aplikasi AI kami.</textarea>
+
+    <div class="grid">
         <div class="field">
-            <label>Bahasa (mode Puter)</label>
-            <select id="language-select">
+            <label>Bahasa</label>
+            <select id="lang">
+                <option value="id-ID" selected>Indonesia</option>
                 <option value="en-US">English (US)</option>
-                <option value="id-ID" selected>Indonesian</option>
+                <option value="en-GB">English (UK)</option>
                 <option value="fr-FR">French</option>
                 <option value="de-DE">German</option>
                 <option value="es-ES">Spanish</option>
                 <option value="it-IT">Italian</option>
-            </select>
-        </div>
-        <div class="field">
-            <label>Provider (mode Puter)</label>
-            <select id="provider-select">
-                <option value="">Default</option>
-                <option value="gemini">Gemini</option>
-                <option value="xai">xAI (Grok)</option>
-                <option value="speechify">Speechify</option>
+                <option value="ja-JP">Japanese</option>
+                <option value="ko-KR">Korean</option>
+                <option value="ar-SA">Arabic</option>
             </select>
         </div>
         <div class="field">
             <label>Voice</label>
-            <select id="voice-select"></select>
+            <select id="voice"><option value="">(default sistem)</option></select>
+        </div>
+        <div class="field">
+            <label>Kecepatan: <span class="val" id="rate-val">1.0</span></label>
+            <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
+        </div>
+        <div class="field">
+            <label>Pitch: <span class="val" id="pitch-val">1.0</span></label>
+            <input type="range" id="pitch" min="0.5" max="2" step="0.1" value="1">
         </div>
     </div>
 
-    <div class="engines" id="engines" hidden>
-        <button type="button" data-engine="standard">Standard</button>
-        <button type="button" data-engine="neural" class="active">Neural</button>
-        <button type="button" data-engine="generative">Generative</button>
+    <div class="btns">
+        <button id="play">▶ Putar</button>
+        <button id="pause" class="secondary" hidden>⏸ Jeda</button>
+        <button id="resume" class="secondary" hidden>▶ Lanjut</button>
+        <button id="stop" class="danger" hidden>■ Stop</button>
     </div>
 
-    <div class="row">
-        <button id="speak-free">▶ Dengar (gratis, tanpa login)</button>
-        <button id="speak-puter" class="secondary">▶ Puter TTS (login)</button>
-        <button id="stop-btn" class="secondary" hidden>■ Stop</button>
-    </div>
-
-    <div class="status" id="status">Pilih mode lalu klik Dengar.</div>
-    <p><a href="index.html">← Chat utama</a></p>
+    <div class="status" id="status">Siap. Klik Putar — suara keluar dari perangkatmu, 100% gratis.</div>
+    <p><a href="index.html">← Chat utama (balasan AI juga bisa 🔊)</a></p>
 
     <script>
-        const textInput = document.getElementById('text-input');
-        const langSel = document.getElementById('language-select');
-        const providerSel = document.getElementById('provider-select');
-        const voiceSel = document.getElementById('voice-select');
-        const enginesBox = document.getElementById('engines');
-        const statusEl = document.getElementById('status');
-        const stopBtn = document.getElementById('stop-btn');
-        const btnFree = document.getElementById('speak-free');
-        const btnPuter = document.getElementById('speak-puter');
+        const $ = (id) => document.getElementById(id);
+        const textInput = $('text-input');
+        const langSel = $('lang');
+        const voiceSel = $('voice');
+        const rate = $('rate');
+        const pitch = $('pitch');
+        const statusEl = $('status');
+        const btnPlay = $('play');
+        const btnPause = $('pause');
+        const btnResume = $('resume');
+        const btnStop = $('stop');
 
-        let engine = 'neural';
-        let browserVoices = [];
+        let voices = [];
+        let speaking = false;
 
         function setStatus(msg) { statusEl.textContent = msg; }
 
-        // ===== Mode gratis: Web Speech API (tanpa login) =====
-        function loadBrowserVoices() {
-            const load = () => {
-                browserVoices = speechSynthesis.getVoices();
-                voiceSel.innerHTML = '';
-                const wanted = browserVoices.filter(v => v.lang.startsWith(langSel.value.slice(0, 2)));
-                const list = (wanted.length ? wanted : browserVoices).slice(0, 30);
-                for (const v of list) {
-                    const o = document.createElement('option');
-                    o.value = v.name;
-                    o.textContent = v.name + ' (' + v.lang + ')';
-                    voiceSel.appendChild(o);
-                }
-                if (!list.length) voiceSel.innerHTML = '<option value="">(default sistem)</option>';
-            };
-            load();
-            speechSynthesis.onvoiceschanged = load;
+        function refreshVoices() {
+            voices = speechSynthesis.getVoices();
+            const code = langSel.value.slice(0, 2);
+            const match = voices.filter(v => v.lang.toLowerCase().replace('_', '-').startsWith(code));
+            const list = (match.length ? match : voices).slice(0, 40);
+            const prev = voiceSel.value;
+            voiceSel.innerHTML = '<option value="">(default sistem)</option>';
+            for (const v of list) {
+                const o = document.createElement('option');
+                o.value = v.name;
+                o.textContent = v.name + ' — ' + v.lang;
+                voiceSel.appendChild(o);
+            }
+            if ([...voiceSel.options].some(o => o.value === prev)) voiceSel.value = prev;
+            setStatus(
+                'Voice tersedia: ' + voices.length +
+                (match.length ? ' (' + match.length + ' cocok ' + langSel.value + ')' : ' (pakai default)') +
+                '\nGratis tanpa limit — putar sesering yang kamu mau.'
+            );
         }
 
-        function speakFree() {
+        function setButtons(state) {
+            speaking = state === 'speaking';
+            btnPlay.hidden = state === 'speaking' || state === 'paused';
+            btnPause.hidden = state !== 'speaking';
+            btnResume.hidden = state !== 'paused';
+            btnStop.hidden = state === 'idle';
+            btnPlay.disabled = state === 'speaking';
+        }
+
+        function play() {
             const text = textInput.value.trim();
             if (!text) return setStatus('Teks kosong.');
             speechSynthesis.cancel();
             const u = new SpeechSynthesisUtterance(text);
             u.lang = langSel.value;
-            const v = browserVoices.find(x => x.name === voiceSel.value);
+            u.rate = parseFloat(rate.value);
+            u.pitch = parseFloat(pitch.value);
+            const v = voices.find(x => x.name === voiceSel.value);
             if (v) u.voice = v;
-            u.rate = 1;
-            stopBtn.hidden = false;
-            setStatus('Memutar suara browser (gratis)…\nBahasa: ' + u.lang);
-            u.onend = () => { stopBtn.hidden = true; setStatus('Selesai.'); };
-            u.onerror = (e) => { stopBtn.hidden = true; setStatus('Error browser TTS: ' + e.error); };
+
+            u.onstart = () => { setButtons('speaking'); setStatus('Memutar…\n' + text.slice(0, 120) + (text.length > 120 ? '…' : '')); };
+            u.onend = () => { setButtons('idle'); setStatus('Selesai. ✓ Gratis, tanpa balance.'); };
+            u.onerror = (e) => {
+                setButtons('idle');
+                setStatus(e.error === 'synthesis-failed'
+                    ? 'Perangkat ini tidak punya output suara (common di server/headless). Di HP/laptop biasanya langsung jalan.'
+                    : 'Error: ' + e.error);
+            };
+
+            setButtons('speaking');
             speechSynthesis.speak(u);
         }
 
-        // ===== Mode Puter: pola tutorial txt2speech =====
-        async function speakPuter() {
-            const text = textInput.value.trim();
-            if (!text) return setStatus('Teks kosong.');
-            btnPuter.disabled = true;
-            setStatus('Memanggil Puter TTS…');
-            try {
-                if (!puter.auth.isSignedIn()) {
-                    await puter.auth.signIn();
-                }
+        btnPlay.onclick = play;
+        btnPause.onclick = () => { speechSynthesis.pause(); setButtons('paused'); setStatus('Dijeda.'); };
+        btnResume.onclick = () => { speechSynthesis.resume(); setButtons('speaking'); setStatus('Lanjut…'); };
+        btnStop.onclick = () => { speechSynthesis.cancel(); setButtons('idle'); setStatus('Dihentikan.'); };
 
-                const provider = providerSel.value;
-                const language = langSel.value;
-                const voice = voiceSel.value || undefined;
+        rate.oninput = () => $('rate-val').textContent = parseFloat(rate.value).toFixed(1);
+        pitch.oninput = () => $('pitch-val').textContent = parseFloat(pitch.value).toFixed(1);
+        langSel.onchange = refreshVoices;
 
-                // build options sesuai tutorial
-                let opts;
-                if (provider === 'gemini') {
-                    opts = {
-                        provider: 'gemini',
-                        model: 'gemini-2.5-flash-preview-tts',
-                        voice: voice || 'Puck',
-                        instructions: 'Speak in a friendly, upbeat tone.',
-                    };
-                } else if (provider === 'xai') {
-                    opts = {
-                        provider: 'xai',
-                        voice: voice || 'eve',
-                        output_format: 'mp3',
-                    };
-                } else if (provider === 'speechify') {
-                    opts = {
-                        provider: 'speechify',
-                        model: 'simba-3.2',
-                        voice: voice || 'geffen_32',
-                    };
-                } else {
-                    // default Puter: engine + voice + language (Contoh 3)
-                    opts = { engine, language };
-                    if (voice) opts.voice = voice;
-                }
+        document.querySelectorAll('.presets button').forEach(b => {
+            b.onclick = () => { textInput.value = b.dataset.t; play(); };
+        });
 
-                setStatus('Puter TTS: ' + (provider || 'default') + ' / engine=' + (opts.engine || '-') + ' …');
-                const audio = await puter.ai.txt2speech(text, opts);
-                stopBtn.hidden = false;
-                audio.play();
-                setStatus('Memutar Puter TTS…');
-                audio.onended = () => { stopBtn.hidden = true; setStatus('Selesai (Puter).'); };
-                audio.onerror = () => { stopBtn.hidden = true; setStatus('Error pemutaran audio Puter.'); };
-            } catch (e) {
-                setStatus('Error: ' + (e?.message || e?.error || e));
-            } finally {
-                btnPuter.disabled = false;
-            }
+        if (typeof speechSynthesis === 'undefined') {
+            setStatus('Browser ini tidak mendukung Web Speech API.');
+            btnPlay.disabled = true;
+        } else {
+            refreshVoices();
+            speechSynthesis.onvoiceschanged = refreshVoices;
+            setButtons('idle');
         }
-
-        // Contoh 2: bahasa sebagai argumen kedua — dipakai saat provider default & mau simpel
-        async function speakPuterLang() {
-            const text = textInput.value.trim();
-            if (!text) return;
-            try {
-                if (!puter.auth.isSignedIn()) await puter.auth.signIn();
-                setStatus('Puter TTS bahasa ' + langSel.value + '…');
-                const audio = await puter.ai.txt2speech(text, langSel.value);
-                stopBtn.hidden = false;
-                audio.play();
-                audio.onended = () => { stopBtn.hidden = true; setStatus('Selesai.'); };
-            } catch (e) {
-                setStatus('Error: ' + (e?.message || e?.error || e));
-            }
-        }
-
-        enginesBox.addEventListener('click', (e) => {
-            const b = e.target.closest('button[data-engine]');
-            if (!b) return;
-            engine = b.dataset.engine;
-            enginesBox.querySelectorAll('button').forEach(x => x.classList.remove('active'));
-            b.classList.add('active');
-            setStatus('Engine: ' + engine);
-        });
-
-        providerSel.addEventListener('change', () => {
-            enginesBox.hidden = !!providerSel.value;
-            if (providerSel.value === 'xai') {
-                voiceSel.innerHTML = '<option value="eve">eve (energetic)</option><option value="ara">ara (warm)</option><option value="rex">rex (confident)</option><option value="sal">sal (smooth)</option><option value="leo">leo (authoritative)</option>';
-            } else if (providerSel.value === 'speechify') {
-                voiceSel.innerHTML = '<option value="geffen_32">geffen_32</option><option value="dominic_32">dominic_32</option><option value="harper_32">harper_32</option><option value="hugh_32">hugh_32</option><option value="imogen_32">imogen_32</option>';
-            } else if (providerSel.value === 'gemini') {
-                voiceSel.innerHTML = '<option value="Puck">Puck</option><option value="Charon">Charon</option><option value="Kore">Kore</option><option value="Fenrir">Fenrir</option>';
-            } else {
-                loadBrowserVoices();
-            }
-        });
-
-        langSel.addEventListener('change', () => { if (!providerSel.value) loadBrowserVoices(); });
-
-        btnFree.addEventListener('click', speakFree);
-        btnPuter.addEventListener('click', speakPuter);
-        stopBtn.addEventListener('click', () => {
-            speechSynthesis.cancel();
-            stopBtn.hidden = true;
-            setStatus('Dihentikan.');
-        });
-
-        loadBrowserVoices();
-        enginesBox.hidden = false;
     </script>
 </body>
 </html>
