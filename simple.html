@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat Dasar</title>
-    <script src="https://js.puter.com/v2/"></script>
     <style>
         body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; background: #0b0b0d; color: #e8e8ea; }
         h1 { font-size: 22px; }
@@ -18,11 +17,11 @@
 </head>
 <body>
     <h1>◆ Chat Dasar</h1>
-    <p class="note">Tanpa login (openai-fast) · Claude non-stream kalau login</p>
+    <p class="note">100% gratis · tanpa login · non-streaming</p>
     <button id="go">Tanya: What is life?</button>
     <select id="model">
-        <option value="openai-fast" selected>openai-fast (tanpa login)</option>
-        <option value="claude-sonnet-5-5">claude-sonnet-5-5 (login)</option>
+        <option value="openai-fast" selected>openai-fast</option>
+        <option value="openai">openai</option>
     </select>
     <div id="out">Menunggu…</div>
     <p><a href="index.html">← Chat utama</a></p>
@@ -34,28 +33,21 @@
             out.textContent = 'Memanggil AI…';
             try {
                 const model = document.getElementById('model').value;
-                if (model.startsWith('claude-')) {
-                    if (!puter.auth.isSignedIn()) await puter.auth.signIn();
-                    // pola tutorial: content[0].text
-                    const response = await puter.ai.chat("What is life? Answer in 2-3 sentences.", { model });
-                    out.textContent = response.message.content[0].text;
-                } else {
-                    const res = await fetch('https://text.pollinations.ai/openai', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            model,
-                            messages: [{ role: 'user', content: 'What is life? Answer in 2-3 sentences.' }],
-                        }),
-                    });
-                    if (!res.ok) {
-                        const t = await res.text();
-                        if (res.status === 402) throw new Error('Rate limit — tunggu ±45 detik.');
-                        throw new Error('API ' + res.status);
-                    }
-                    const data = await res.json();
-                    out.textContent = data.choices?.[0]?.message?.content || '(empty)';
+                const res = await fetch('https://text.pollinations.ai/openai', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model,
+                        messages: [{ role: 'user', content: 'What is life? Answer in 2-3 sentences.' }],
+                    }),
+                });
+                if (!res.ok) {
+                    const t = await res.text();
+                    if (res.status === 402) throw new Error('Rate limit — tunggu ±45 detik.');
+                    throw new Error('API ' + res.status);
                 }
+                const data = await res.json();
+                out.textContent = data.choices?.[0]?.message?.content || '(empty)';
             } catch (e) {
                 out.textContent = 'Error: ' + (e?.message || e?.error || e);
             } finally {

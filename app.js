@@ -2,14 +2,8 @@ const SYSTEM_PROMPT = "You are a helpful assistant. Answer clearly and concisely
 const POLLINATIONS_URL = "https://text.pollinations.ai/openai";
 
 const MODELS = [
-    { id: "openai-fast", label: "openai-fast — gratis, tanpa login", free: true },
-    { id: "claude-sonnet-5-5", label: "claude-sonnet-5-5 (login)", free: false },
-    { id: "claude-haiku-5-5", label: "claude-haiku-5-5 (login)", free: false },
-    { id: "claude-opus-5-5", label: "claude-opus-5-5 (login)", free: false },
-    { id: "claude-opus-5-fast", label: "claude-opus-5-fast (login)", free: false },
-    { id: "claude-fable-5-2", label: "claude-fable-5-2 (login)", free: false },
-    { id: "claude-sonnet-4-6", label: "claude-sonnet-4-6 (login)", free: false },
-    { id: "claude-opus-4-8", label: "claude-opus-4-8 (login)", free: false },
+    { id: "openai-fast", label: "openai-fast — gratis, tanpa login" },
+    { id: "openai", label: "openai — gratis, tanpa login" },
 ];
 
 const els = {
@@ -24,7 +18,6 @@ const els = {
     newChatBtn: document.getElementById('newChatBtn'),
     chatTitle: document.getElementById('chatTitle'),
     status: document.getElementById('status'),
-    loginBtn: document.getElementById('loginBtn'),
 };
 
 let chats = [];
@@ -94,7 +87,6 @@ function msgNode(role, content, isError) {
     bubble.textContent = content;
     div.append(avatar, bubble);
 
-    // tombol dengar (Web Speech API — tanpa login)
     if (role === 'assistant' && !isError && content) {
         const speak = document.createElement('button');
         speak.type = 'button';
@@ -122,21 +114,10 @@ function setStatus(text, busyState) {
     els.status.classList.toggle('busy', !!busyState);
 }
 
-function isSignedIn() {
-    try { return !!(window.puter && puter.auth && puter.auth.isSignedIn()); } catch { return false; }
-}
-
-function loginBtnLabel() {
-    const signed = isSignedIn();
-    els.loginBtn.textContent = signed ? '✓ Claude aktif' : 'Login Claude';
-    els.loginBtn.classList.toggle('logged-in', signed);
-}
-
 function friendlyError(err) {
     const msg = err?.message || err?.error || String(err);
     if (err?.name === 'AbortError') return 'Dihentikan.';
     if (String(msg).includes('popup_blocked')) return 'Pop-up diblokir browser. Izinkan pop-up lalu coba lagi.';
-    if (String(msg).includes('auth_window_closed')) return 'Login dibatalkan.';
     if (String(msg).includes('402') || String(msg).includes('FREE_LIMIT')) return 'Rate limit gratis — tunggu ±45 detik lalu kirim lagi.';
     if (String(msg).includes('Failed to fetch') || String(msg).includes('NetworkError')) return 'Jaringan gagal — cek koneksi.';
     return msg;
@@ -146,18 +127,7 @@ function selectedModel() {
     return els.modelSelect.value || 'openai-fast';
 }
 
-function isClaude(modelId) {
-    return modelId.startsWith('claude-');
-}
-
-async function ensureAuthForClaude() {
-    if (isSignedIn()) return;
-    setStatus('login Puter untuk Claude…', true);
-    await puter.auth.signIn();
-    loginBtnLabel();
-}
-
-// ===== Backend 1: Pollinations — tanpa login, streaming =====
+// Backend gratis Pollinations — tanpa login, streaming
 async function streamPollinations(messages, onChunk, signal, model) {
     const res = await fetch(POLLINATIONS_URL, {
         method: 'POST',
@@ -198,42 +168,10 @@ async function streamPollinations(messages, onChunk, signal, model) {
     return full;
 }
 
-// ===== Backend 2: Puter Claude — butuh login, streaming (pola tutorial) =====
-async function streamClaude(messages, onChunk, signal, model) {
-    // messages array → (messages, testMode, options); pola stream + part?.text
-    const response = await puter.ai.chat(
-        messages,
-        false,
-        { model, stream: true, signal }
-    );
-    let full = '';
-    for await (const part of response) {
-        if (part && part.type === 'error') throw new Error(part.message || 'stream error');
-        const chunk = part?.text;
-        if (chunk) {
-            full += chunk;
-            onChunk(full);
-        }
-    }
-    return full;
-}
-
 async function send(text) {
     if (busy) return;
     const chat = activeChat();
     const model = selectedModel();
-    const useClaude = isClaude(model);
-
-    // Claude → wajib login dulu, dari konteks klik (pop-up tidak diblokir)
-    if (useClaude) {
-        try {
-            await ensureAuthForClaude();
-        } catch (err) {
-            pushError(chat, friendlyError(err));
-            setStatus('siap', false);
-            return;
-        }
-    }
 
     chat.messages.push({ role: 'user', content: text });
     if (chat.messages.length === 1) {
@@ -246,7 +184,7 @@ async function send(text) {
     busy = true;
     els.sendBtn.disabled = true;
     els.abortBtn.hidden = false;
-    setStatus(useClaude ? 'Claude berpikir…' : 'berpikir…', true);
+    setStatus('berpikir…', true);
 
     const history = [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -274,12 +212,10 @@ async function send(text) {
             bubble.textContent = partial;
             bubble.appendChild(cursor);
             scrollBottom();
-            setStatus(useClaude ? 'Claude streaming…' : 'streaming…', true);
+            setStatus('streaming…', true);
         };
 
-        const full = useClaude
-            ? await streamClaude(history, onChunk, currentAbort.signal, model)
-            : await streamPollinations(history, onChunk, currentAbort.signal, model);
+        const full = await streamPollinations(history, onChunk, currentAbort.signal, model);
 
         if (!full) throw new Error('Respons kosong dari model');
         chat.messages.push({ role: 'assistant', content: full });
@@ -305,14 +241,7 @@ async function send(text) {
         els.abortBtn.hidden = true;
         els.input.focus();
         scrollBottom();
-        loginBtnLabel();
     }
-}
-
-function pushError(chat, msg) {
-    chat.messages.push({ role: 'assistant', content: 'Error: ' + msg, error: true });
-    save();
-    renderMessages();
 }
 
 els.composer.addEventListener('submit', e => {
@@ -322,22 +251,6 @@ els.composer.addEventListener('submit', e => {
     els.input.value = '';
     els.input.style.height = 'auto';
     send(text);
-});
-
-els.loginBtn.addEventListener('click', async () => {
-    if (busy) return;
-    try {
-        if (isSignedIn()) {
-            setStatus('Claude sudah aktif', false);
-            return;
-        }
-        await puter.auth.signIn();
-        loginBtnLabel();
-        setStatus('Claude aktif — pilih model Claude di sidebar', false);
-    } catch (err) {
-        setStatus('siap', false);
-        alert('Login: ' + friendlyError(err));
-    }
 });
 
 els.abortBtn.addEventListener('click', () => {
@@ -361,7 +274,6 @@ els.newChatBtn.addEventListener('click', () => {
     createChat(true);
 });
 
-// init model select
 els.modelSelect.innerHTML = '';
 for (const m of MODELS) {
     const opt = document.createElement('option');
@@ -374,4 +286,4 @@ els.modelSelect.value = 'openai-fast';
 load();
 renderHistory();
 renderMessages();
-loginBtnLabel();
+setStatus('siap', false);

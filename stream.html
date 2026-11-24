@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Streaming Real-time</title>
-    <script src="https://js.puter.com/v2/"></script>
     <style>
         body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; background: #0b0b0d; color: #e8e8ea; }
         h1 { font-size: 22px; }
@@ -21,12 +20,11 @@
 </head>
 <body>
     <h1>◆ Streaming Real-time</h1>
-    <p class="note">Tanpa login (openai-fast) · Claude opsional kalau sudah login</p>
+    <p class="note">100% gratis · tanpa login · tanpa API key</p>
     <button id="go">Stream sekarang</button>
     <select id="model">
-        <option value="openai-fast" selected>openai-fast (tanpa login)</option>
-        <option value="claude-sonnet-5-5">claude-sonnet-5-5 (login)</option>
-        <option value="claude-fable-5-2">claude-fable-5-2 (login)</option>
+        <option value="openai-fast" selected>openai-fast</option>
+        <option value="openai">openai</option>
     </select>
     <div id="out"><span class="cursor"></span></div>
     <div class="meta" id="meta"></div>
@@ -78,40 +76,15 @@
             return { full, n };
         }
 
-        async function streamClaude(prompt, model) {
-            // pola tutorial: stream + for await + part?.text
-            const response = await puter.ai.chat(prompt, { model, stream: true });
-            let full = '', n = 0;
-            for await (const part of response) {
-                const t = part?.text;
-                if (t) {
-                    full += t;
-                    n++;
-                    out.textContent = full;
-                    const cur = document.createElement('span');
-                    cur.className = 'cursor';
-                    out.appendChild(cur);
-                    meta.textContent = 'chunks=' + n;
-                }
-            }
-            return { full, n };
-        }
-
         go.onclick = async () => {
             go.disabled = true;
             out.innerHTML = '<span class="cursor"></span>';
             const model = modelSel.value;
-            const useClaude = model.startsWith('claude-');
             meta.textContent = 'memulai…';
             const t0 = performance.now();
             try {
-                const prompt = 'Write a detailed essay on the impact of artificial intelligence on society (3 short paragraphs).';
-                if (useClaude) {
-                    if (!puter.auth.isSignedIn()) await puter.auth.signIn();
-                    var r = await streamClaude(prompt, model);
-                } else {
-                    var r = await streamFree(prompt, model);
-                }
+                const prompt = 'Write a short essay on AI in 2 paragraphs.';
+                const r = await streamFree(prompt, model);
                 if (!r.full) throw new Error('Respons kosong');
                 meta.textContent = 'Selesai · ' + r.n + ' chunks · ' + ((performance.now() - t0) / 1000).toFixed(1) + 's · ' + model;
             } catch (e) {
