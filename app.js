@@ -8,9 +8,9 @@ const MODELS = [
 
     { id: "mistralai/mistral-large-4", label: "Mistral Large 4", tier: "mistral", hint: "complex tasks" },
     { id: "mistralai/mistral-medium-2604", label: "Mistral Medium 3.5", tier: "mistral", hint: "agentic coding · 128B" },
-    { id: "mistralai/mistral-small-2603", label: "Mistral Small 2603", tier: "mistral", hint: "balanced" },
+    { id: "mistralai/mistral-small-2603", label: "Mistral Small 2603", tier: "mistral", hint: "seimbang" },
     { id: "mistralai/ministral-14b-2512", label: "Ministral 14B", tier: "mistral", hint: "edge" },
-    { id: "mistralai/mistral-medium-3.1", label: "Mistral Medium 3.1", tier: "mistral", hint: "balanced" },
+    { id: "mistralai/mistral-medium-3.1", label: "Mistral Medium 3.1", tier: "mistral", hint: "seimbang" },
     { id: "mistralai/voxtral-small-24b-2507", label: "Voxtral 24B", tier: "mistral", hint: "voice" },
     { id: "mistralai/mistral-small-3.2-24b-instruct", label: "Mistral Small 3.2", tier: "mistral", hint: "24B instruct" },
     { id: "mistralai/mistral-small-3.1-24b-instruct", label: "Mistral Small 3.1", tier: "mistral", hint: "24B instruct" },
