@@ -5,7 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image Gen — Gratis</title>
     <link rel="stylesheet" href="features.css">
-    <style>:root { --c: #fb923c; }</style>
+    <style>
+        :root { --c: #fb923c; }
+        .preview-wrap { position: relative; }
+        .bar { height: 6px; background: rgba(255,255,255,.08); border-radius: 99px; overflow: hidden; margin-top: 8px; }
+        .bar > i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, #fb923c, #f97316); transition: width .2s ease; }
+    </style>
 </head>
 <body>
     <a class="home-pill" href="index.html">◆ Nexus</a>
@@ -16,7 +21,7 @@
             </div>
             <div>
                 <h1>Image Gen <span class="badge">GRATIS · TANPA LOGIN</span></h1>
-                <p class="note" style="margin:4px 0 0">image.pollinations.ai · tanpa API key · 1 gambar / ±45 dtk</p>
+                <p class="note" style="margin:4px 0 0">image.pollinations.ai · progres live real-time · tanpa API key</p>
             </div>
         </div>
 
@@ -46,11 +51,13 @@
                 <button id="edit" class="secondary" disabled>2. Edit / varian</button>
             </div>
             <div id="status">Langkah 1 dulu.</div>
+            <div class="bar" id="bar1" hidden><i></i></div>
+            <div class="bar" id="bar2" hidden><i></i></div>
         </div>
 
         <div class="row">
-            <div class="card"><h3>Hasil generate</h3><img id="img1" class="preview" alt="generated" /></div>
-            <div class="card"><h3>Hasil edit</h3><img id="img2" class="preview" alt="edited" /></div>
+            <div class="card preview-wrap"><h3>Hasil generate</h3><img id="img1" class="preview" alt="generated" /><div class="meta" id="m1"></div></div>
+            <div class="card preview-wrap"><h3>Hasil edit</h3><img id="img2" class="preview" alt="edited" /><div class="meta" id="m2"></div></div>
         </div>
 
         <a class="back" href="index.html">← Kembali</a>
@@ -61,6 +68,10 @@
         const status = document.getElementById('status');
         const gen = document.getElementById('gen');
         const edit = document.getElementById('edit');
+        const bar1 = document.getElementById('bar1');
+        const bar2 = document.getElementById('bar2');
+        const m1 = document.getElementById('m1');
+        const m2 = document.getElementById('m2');
 
         function sizeParts() {
             const v = document.getElementById('size').value;
@@ -75,24 +86,60 @@
             return `https://image.pollinations.ai/prompt/${p}?width=${w}&height=${h}&seed=${s}&nologo=true`;
         }
 
-        function loadImage(url) {
-            return new Promise((res, rej) => {
+        async function fetchImageRealtime(url, bar, statusEl, metaEl) {
+            bar.hidden = false;
+            const fill = bar.querySelector('i');
+            fill.style.width = '0%';
+            const t0 = performance.now();
+            let loaded = 0;
+            let total = 0;
+            let firstByte = null;
+
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const len = res.headers.get('content-length');
+            total = len ? parseInt(len, 10) : 0;
+
+            const reader = res.body.getReader();
+            const chunks = [];
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                if (firstByte == null) firstByte = Math.round(performance.now() - t0);
+                loaded += value.length;
+                chunks.push(value);
+                if (total) {
+                    const pct = Math.min(100, Math.round((loaded / total) * 100));
+                    fill.style.width = pct + '%';
+                    statusEl.textContent = `real-time · ${pct}% · ${loaded} bytes · first ${firstByte}ms`;
+                } else {
+                    fill.style.width = Math.min(95, Math.round((loaded / 100000) * 100)) + '%';
+                    statusEl.textContent = `real-time · ${loaded} bytes · first ${firstByte || 0}ms`;
+                }
+            }
+            fill.style.width = '100%';
+            const blob = new Blob(chunks, { type: res.headers.get('content-type') || 'image/jpeg' });
+            const objUrl = URL.createObjectURL(blob);
+            await new Promise((res, rej) => {
                 const im = new Image();
-                im.onload = () => res(im);
-                im.onerror = () => rej(new Error('Gagal muat gambar'));
-                im.src = url;
+                im.onload = res;
+                im.onerror = () => rej(new Error('Gagal decode gambar'));
+                im.src = objUrl;
             });
+            const ms = Math.round(performance.now() - t0);
+            metaEl.textContent = `${(blob.size / 1024).toFixed(1)} KB · ${ms}ms real-time`;
+            statusEl.textContent = `Generate OK ✓ ${ms}ms · progres live selesai.`;
+            return objUrl;
         }
 
         gen.onclick = async () => {
             gen.disabled = true;
-            status.textContent = 'Generate… (bisa 10–30 detik, gratis tanpa login)';
+            status.textContent = 'Generate… (streaming byte real-time, gratis tanpa login)';
             try {
                 const seed = document.getElementById('seed').value || (Date.now() % 100000);
                 const url1 = imageUrl(document.getElementById('p1').value, seed);
-                await loadImage(url1);
-                img1.src = url1;
-                status.textContent = 'Generate OK ✓ Tunggu ±45 detik sebelum langkah 2 (limit gratis).';
+                const obj = await fetchImageRealtime(url1, bar1, status, m1);
+                img1.src = obj;
                 edit.disabled = false;
                 setTimeout(() => { status.textContent = 'Slot edit siap — klik tombol 2.'; }, 46000);
             } catch (e) {
@@ -104,14 +151,14 @@
 
         edit.onclick = async () => {
             edit.disabled = true;
-            status.textContent = 'Membuat varian/edit…';
+            status.textContent = 'Membuat varian/edit… real-time';
             try {
                 const p2 = document.getElementById('p2').value + ' | based on: ' + document.getElementById('p1').value;
                 const seed = (Date.now() % 100000) + 7;
                 const url = imageUrl(p2, seed);
-                await loadImage(url);
-                img2.src = url;
-                status.textContent = 'Selesai ✓ Catatan: tier gratis = text-to-image.';
+                const obj = await fetchImageRealtime(url, bar2, status, m2);
+                img2.src = obj;
+                status.textContent = 'Selesai ✓ progres byte real-time.';
             } catch (e) {
                 status.textContent = 'Error: ' + e.message;
             } finally {

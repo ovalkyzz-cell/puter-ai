@@ -8,6 +8,7 @@
     <style>
         :root { --c: #f472b6; }
         img#pic { max-width: 320px; border-radius: 12px; display: block; margin: 8px 0 14px; border: 1px solid var(--border); animation: imgIn .5s ease both; }
+        #out { white-space: pre-wrap; min-height: 48px; }
     </style>
 </head>
 <body>
@@ -19,15 +20,16 @@
             </div>
             <div>
                 <h1>Vision <span class="badge">GRATIS · 500/HARI</span></h1>
-                <p class="note" style="margin:4px 0 0">Analisis gambar via Cloudflare Workers AI · tanpa login</p>
+                <p class="note" style="margin:4px 0 0">Analisis gambar · hasil mengalir real-time · tanpa login</p>
             </div>
         </div>
 
         <div class="card">
             <h2>Upload / pilih gambar</h2>
-            <img id="pic" src="https://assets.puter.site/doge.jpeg" alt="sample" crossorigin="anonymous">
+            <img id="pic" src="https://picsum.photos/seed/nexus/640/420" alt="sample">
             <input type="file" id="file" accept="image/*">
             <button id="go">Analisis Gambar</button>
+            <div class="meta" id="meta"></div>
             <div id="out">Klik tombol untuk menganalisis gambar (atau upload sendiri).</div>
         </div>
 
@@ -35,10 +37,28 @@
     </div>
     <script>
         const out = document.getElementById('out');
+        const meta = document.getElementById('meta');
         const pic = document.getElementById('pic');
         const fileIn = document.getElementById('file');
         const go = document.getElementById('go');
         let currentBlob = null;
+
+        function typeOut(text, ms = 12) {
+            return new Promise(resolve => {
+                out.textContent = '';
+                let i = 0;
+                const tick = () => {
+                    i = Math.min(text.length, i + 2);
+                    out.textContent = text.slice(0, i);
+                    const cur = document.createElement('span');
+                    cur.className = 'cursor';
+                    out.appendChild(cur);
+                    if (i < text.length) setTimeout(tick, ms);
+                    else { out.textContent = text; resolve(); }
+                };
+                tick();
+            });
+        }
 
         async function urlToBlob(url) {
             const r = await fetch(url, { mode: 'cors' });
@@ -72,20 +92,76 @@
             }
         }
 
+        async function streamElaborate(description) {
+            const res = await fetch('https://text.pollinations.ai/openai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'openai-fast',
+                    stream: true,
+                    messages: [{
+                        role: 'user',
+                        content: 'Describe this image analysis in 3 short bullet points in Indonesian, based on:\n' + description,
+                    }],
+                }),
+            });
+            if (!res.ok) return typeOut(description);
+            const reader = res.body.getReader();
+            const dec = new TextDecoder();
+            let buf = '', full = '', n = 0;
+            out.textContent = '';
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buf += dec.decode(value, { stream: true });
+                const lines = buf.split('\n');
+                buf = lines.pop() || '';
+                for (const line of lines) {
+                    const t = line.trim();
+                    if (!t.startsWith('data:')) continue;
+                    const d = t.slice(5).trim();
+                    if (d === '[DONE]') continue;
+                    try {
+                        const j = JSON.parse(d);
+                        const c = j.choices?.[0]?.delta?.content || '';
+                        if (c) {
+                            full += c;
+                            n++;
+                            out.textContent = full;
+                            const cur = document.createElement('span');
+                            cur.className = 'cursor';
+                            out.appendChild(cur);
+                            meta.textContent = 'real-time · chunks=' + n;
+                        }
+                    } catch {}
+                }
+            }
+            if (!full) return typeOut(description);
+            out.textContent = full;
+            meta.textContent = 'Selesai · ' + n + ' chunks real-time';
+            return full;
+        }
+
         go.onclick = async () => {
             go.disabled = true;
-            out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span> Menganalisis… (±10–20 detik)';
+            out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span>';
+            meta.textContent = 'menganalisis… (±10–20 detik)';
             try {
-                const blob = currentBlob || await urlToBlob(pic.src.startsWith('blob:') ? pic.src : 'https://assets.puter.site/doge.jpeg');
+                const blob = currentBlob || await urlToBlob(pic.src);
                 const fd = new FormData();
                 fd.append('file', blob, 'image.jpg');
                 fd.append('options', JSON.stringify({ maxTags: 10 }));
+                meta.textContent = 'vision API · streaming hasil…';
                 const res = await fetch('https://aiautotagging.com/api/tag/image', { method: 'POST', body: fd });
                 const text = await res.text();
                 if (!res.ok) throw new Error('API ' + res.status + ': ' + text.slice(0, 150));
-                out.textContent = parseVision(text);
+                const desc = parseVision(text);
+                meta.textContent = 'AI real-time mengalir…';
+                out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span>';
+                await streamElaborate(desc);
             } catch (e) {
                 out.textContent = 'Error: ' + e.message;
+                meta.textContent = '';
             } finally {
                 go.disabled = false;
             }

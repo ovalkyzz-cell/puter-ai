@@ -8,6 +8,7 @@
     <style>
         :root { --c: #34d399; }
         #src { color: var(--muted); font-size: 12px; margin-top: 8px; word-break: break-all; }
+        #out { white-space: pre-wrap; min-height: 60px; }
     </style>
 </head>
 <body>
@@ -19,7 +20,7 @@
             </div>
             <div>
                 <h1>Web Fetch + AI <span class="badge">GRATIS</span></h1>
-                <p class="note" style="margin:4px 0 0">r.jina.ai live fetch · ringkas via Pollinations · tanpa login</p>
+                <p class="note" style="margin:4px 0 0">r.jina.ai live fetch · ringkas streaming real-time · tanpa login</p>
             </div>
         </div>
 
@@ -30,7 +31,8 @@
             <label>Pertanyaan</label>
             <input id="q" value="Summarize this page in 3 sentences." />
             <button id="go">Fetch + Ringkas</button>
-            <div id="out">Isi URL lalu klik tombol.</div>
+            <div id="out"><span class="cursor"></span></div>
+            <div class="meta" id="meta"></div>
             <div id="src"></div>
         </div>
 
@@ -39,12 +41,62 @@
     <script>
         const out = document.getElementById('out');
         const src = document.getElementById('src');
+        const meta = document.getElementById('meta');
         const go = document.getElementById('go');
+
+        async function streamSummary(messages) {
+            const res = await fetch('https://text.pollinations.ai/openai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ model: 'openai-fast', stream: true, messages }),
+            });
+            if (!res.ok) {
+                if (res.status === 402) throw new Error('Rate limit AI — tunggu ±45 detik.');
+                throw new Error('AI ' + res.status);
+            }
+            const reader = res.body.getReader();
+            const dec = new TextDecoder();
+            let buf = '', full = '', n = 0;
+            const paint = () => {
+                out.textContent = full;
+                const cur = document.createElement('span');
+                cur.className = 'cursor';
+                out.appendChild(cur);
+                meta.textContent = 'real-time · chunks=' + n;
+            };
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buf += dec.decode(value, { stream: true });
+                const lines = buf.split('\n');
+                buf = lines.pop() || '';
+                for (const line of lines) {
+                    const t = line.trim();
+                    if (!t.startsWith('data:')) continue;
+                    const d = t.slice(5).trim();
+                    if (d === '[DONE]') continue;
+                    try {
+                        const j = JSON.parse(d);
+                        if (j.error) throw new Error(j.error.message || 'stream error');
+                        const c = j.choices?.[0]?.delta?.content || '';
+                        if (c) { full += c; n++; paint(); }
+                    } catch (e) {
+                        if (e.message && !e.message.includes('JSON')) throw e;
+                    }
+                }
+            }
+            if (!full) throw new Error('Respons kosong');
+            out.textContent = full;
+            meta.textContent = 'Selesai · ' + n + ' chunks real-time';
+            return full;
+        }
+
         go.onclick = async () => {
             go.disabled = true;
             const url = document.getElementById('url').value.trim();
             const q = document.getElementById('q').value.trim();
-            out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span> Mengambil halaman…';
+            out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span>';
+            meta.textContent = 'mengambil halaman…';
             src.textContent = '';
             try {
                 const pageRes = await fetch('https://r.jina.ai/' + url);
@@ -52,26 +104,15 @@
                 let page = await pageRes.text();
                 if (page.length > 6000) page = page.slice(0, 6000) + '\n\n[truncated]';
                 src.textContent = 'Sumber: ' + url + ' (' + page.length + ' chars)';
-                out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span> Merangkum dengan AI…';
-                const aiRes = await fetch('https://text.pollinations.ai/openai', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: 'openai-fast',
-                        messages: [
-                            { role: 'system', content: 'You summarize web pages accurately and briefly.' },
-                            { role: 'user', content: q + '\n\n--- PAGE CONTENT ---\n' + page },
-                        ],
-                    }),
-                });
-                if (!aiRes.ok) {
-                    if (aiRes.status === 402) throw new Error('Rate limit AI — tunggu ±45 detik.');
-                    throw new Error('AI ' + aiRes.status);
-                }
-                const data = await aiRes.json();
-                out.textContent = data.choices?.[0]?.message?.content || JSON.stringify(data).slice(0, 400);
+                meta.textContent = 'merangkum real-time…';
+                out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span>';
+                await streamSummary([
+                    { role: 'system', content: 'You summarize web pages accurately and briefly.' },
+                    { role: 'user', content: q + '\n\n--- PAGE CONTENT ---\n' + page },
+                ]);
             } catch (e) {
                 out.textContent = 'Error: ' + e.message;
+                meta.textContent = '';
             } finally {
                 go.disabled = false;
             }

@@ -11,6 +11,7 @@
         table { border-collapse: collapse; margin-top: 12px; width: 100%; }
         td, th { border: 1px solid var(--border); padding: 9px 12px; text-align: left; font-size: 13.5px; }
         th { background: rgba(255,255,255,.04); color: var(--muted); text-transform: uppercase; font-size: 11px; letter-spacing: .6px; }
+        #live { margin-top: 12px; min-height: 48px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
@@ -22,7 +23,7 @@
             </div>
             <div>
                 <h1>Speed Test <span class="badge">GRATIS</span></h1>
-                <p class="note" style="margin:4px 0 0">Latency · TTFB · stream first-chunk · tanpa login</p>
+                <p class="note" style="margin:4px 0 0">Latency · TTFB · stream first-chunk real-time · tanpa login</p>
             </div>
         </div>
 
@@ -30,84 +31,79 @@
             <h2>Ukur respons Pollinations</h2>
             <button id="go">Jalankan Tes</button>
             <div id="out">Klik tombol untuk mengukur.</div>
+            <div id="live"></div>
         </div>
 
         <a class="back" href="index.html">← Kembali</a>
     </div>
     <script>
         const out = document.getElementById('out');
+        const live = document.getElementById('live');
         const go = document.getElementById('go');
+
+        async function streamMeasure() {
+            const t0 = performance.now();
+            const res = await fetch('https://text.pollinations.ai/openai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'openai-fast',
+                    stream: true,
+                    messages: [{ role: 'user', content: 'Count 1 to 8 slowly.' }],
+                }),
+            });
+            const ttfb = performance.now() - t0;
+            if (!res.ok) {
+                if (res.status === 402) throw new Error('Rate limit — tunggu ±45 detik.');
+                throw new Error('API ' + res.status);
+            }
+            const reader = res.body.getReader();
+            const dec = new TextDecoder();
+            let buf = '', firstChunk = null, full = '', n = 0;
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buf += dec.decode(value, { stream: true });
+                const lines = buf.split('\n');
+                buf = lines.pop() || '';
+                for (const line of lines) {
+                    const t = line.trim();
+                    if (!t.startsWith('data:')) continue;
+                    const d = t.slice(5).trim();
+                    if (d === '[DONE]') continue;
+                    try {
+                        const j = JSON.parse(d);
+                        const c = j.choices?.[0]?.delta?.content || '';
+                        if (c) {
+                            if (firstChunk == null) firstChunk = performance.now() - t0;
+                            full += c;
+                            n++;
+                            live.textContent = full;
+                        }
+                    } catch {}
+                }
+            }
+            const total = performance.now() - t0;
+            return { ttfb, firstChunk, total, full, n };
+        }
+
         go.onclick = async () => {
             go.disabled = true;
-            out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span> Menjalankan…';
-            const rows = [];
+            out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span> Streaming real-time…';
+            live.textContent = '';
             try {
-                let t0 = performance.now();
-                const res = await fetch('https://text.pollinations.ai/openai', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: 'openai-fast',
-                        messages: [{ role: 'user', content: 'Explain closures in one paragraph.' }],
-                    }),
-                });
-                const ttfb = performance.now() - t0;
-                if (!res.ok) {
-                    if (res.status === 402) throw new Error('Rate limit — tunggu ±45 detik.');
-                    throw new Error('API ' + res.status);
-                }
-                const data = await res.json();
-                const total1 = performance.now() - t0;
-                const content = data.choices?.[0]?.message?.content || '';
-                rows.push(['Non-stream total', Math.round(total1) + ' ms']);
-                rows.push(['TTFB-ish', Math.round(ttfb) + ' ms']);
-                rows.push(['Model', data.model || 'openai-fast']);
-                rows.push(['Chars', String(content.length)]);
-
-                t0 = performance.now();
-                const sres = await fetch('https://text.pollinations.ai/openai', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        model: 'openai-fast',
-                        stream: true,
-                        messages: [{ role: 'user', content: 'Count 1 to 5.' }],
-                    }),
-                });
-                if (sres.ok) {
-                    const reader = sres.body.getReader();
-                    const dec = new TextDecoder();
-                    let buf = '', firstChunk = null, full = '';
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
-                        buf += dec.decode(value, { stream: true });
-                        const lines = buf.split('\n');
-                        buf = lines.pop() || '';
-                        for (const line of lines) {
-                            if (!line.startsWith('data:')) continue;
-                            const d = line.slice(5).trim();
-                            if (d === '[DONE]') continue;
-                            try {
-                                const j = JSON.parse(d);
-                                const c = j.choices?.[0]?.delta?.content || '';
-                                if (c) {
-                                    if (firstChunk == null) firstChunk = performance.now() - t0;
-                                    full += c;
-                                }
-                            } catch {}
-                        }
-                        if (firstChunk != null && full.length > 20) break;
-                    }
-                    rows.push(['Stream first text', firstChunk != null ? Math.round(firstChunk) + ' ms' : 'n/a']);
-                    rows.push(['Stream sample', full.slice(0, 60)]);
-                } else {
-                    rows.push(['Stream', 'skip (' + sres.status + ')']);
-                }
-
-                out.innerHTML = '<span class="big">' + Math.round(total1) + ' ms</span>\n\n' +
+                const r = await streamMeasure();
+                const rows = [
+                    ['TTFB (stream)', Math.round(r.ttfb) + ' ms'],
+                    ['First text chunk', r.firstChunk != null ? Math.round(r.firstChunk) + ' ms' : 'n/a'],
+                    ['Stream total', Math.round(r.total) + ' ms'],
+                    ['Chunks real-time', String(r.n)],
+                    ['Chars', String(r.full.length)],
+                    ['Live sample', r.full.slice(0, 80)],
+                ];
+                out.innerHTML = '<span class="big">' + Math.round(r.firstChunk || r.ttfb) + ' ms</span>\n\n' +
                     '<table><tr><th>Metrik</th><th>Nilai</th></tr>' +
-                    rows.map(r => `<tr><td>${r[0]}</td><td>${r[1]}</td></tr>`).join('') +
+                    rows.map(x => `<tr><td>${x[0]}</td><td>${x[1]}</td></tr>`).join('') +
                     '</table>';
             } catch (e) {
                 out.textContent = 'Error: ' + e.message;

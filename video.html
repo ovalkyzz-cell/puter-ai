@@ -9,6 +9,7 @@
         :root { --c: #fbbf24; }
         video { max-width: 100%; border-radius: 12px; display: block; margin: 8px 0; border: 1px solid var(--border); }
         canvas { max-width: 100%; border-radius: 12px; border: 1px solid var(--border); margin-top: 8px; display: none; animation: imgIn .4s ease both; }
+        #out { white-space: pre-wrap; min-height: 48px; }
     </style>
 </head>
 <body>
@@ -20,16 +21,17 @@
             </div>
             <div>
                 <h1>Video Frame AI <span class="badge">GRATIS</span></h1>
-                <p class="note" style="margin:4px 0 0">Ekstrak 1 frame → AI deskripsikan · tanpa login</p>
+                <p class="note" style="margin:4px 0 0">Ekstrak 1 frame → AI deskripsikan real-time · tanpa login</p>
             </div>
         </div>
 
         <div class="card">
             <h2>Sumber video</h2>
-            <video id="vid" src="https://assets.puter.site/puppy.mp4" controls crossorigin="anonymous"></video>
+            <video id="vid" src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" controls crossorigin="anonymous"></video>
             <canvas id="cv" width="640" height="360"></canvas>
             <button id="go">Analisis Frame Video</button>
-            <div id="out">Klik tombol — frame detik ke-1 akan diekstrak lalu dianalisis AI.</div>
+            <div class="meta" id="meta"></div>
+            <div id="out">Klik tombol — frame detik ke-1 akan diekstrak lalu dianalisis AI real-time.</div>
         </div>
 
         <a class="back" href="index.html">← Kembali</a>
@@ -38,12 +40,70 @@
         const vid = document.getElementById('vid');
         const cv = document.getElementById('cv');
         const out = document.getElementById('out');
+        const meta = document.getElementById('meta');
         const go = document.getElementById('go');
         const ctx = cv.getContext('2d');
 
+        async function streamElaborate(description) {
+            const res = await fetch('https://text.pollinations.ai/openai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'openai-fast',
+                    stream: true,
+                    messages: [{
+                        role: 'user',
+                        content: 'Describe this video frame in 3 short bullet points in Indonesian, based on:\n' + description,
+                    }],
+                }),
+            });
+            if (!res.ok) {
+                out.textContent = description;
+                return description;
+            }
+            const reader = res.body.getReader();
+            const dec = new TextDecoder();
+            let buf = '', full = '', n = 0;
+            out.textContent = '';
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buf += dec.decode(value, { stream: true });
+                const lines = buf.split('\n');
+                buf = lines.pop() || '';
+                for (const line of lines) {
+                    const t = line.trim();
+                    if (!t.startsWith('data:')) continue;
+                    const d = t.slice(5).trim();
+                    if (d === '[DONE]') continue;
+                    try {
+                        const j = JSON.parse(d);
+                        const c = j.choices?.[0]?.delta?.content || '';
+                        if (c) {
+                            full += c;
+                            n++;
+                            out.textContent = full;
+                            const cur = document.createElement('span');
+                            cur.className = 'cursor';
+                            out.appendChild(cur);
+                            meta.textContent = 'real-time · chunks=' + n;
+                        }
+                    } catch {}
+                }
+            }
+            if (!full) {
+                out.textContent = description;
+                return description;
+            }
+            out.textContent = full;
+            meta.textContent = 'Selesai · ' + n + ' chunks real-time';
+            return full;
+        }
+
         go.onclick = async () => {
             go.disabled = true;
-            out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span> Ekstrak frame…';
+            out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span>';
+            meta.textContent = 'ekstrak frame…';
             try {
                 if (vid.readyState < 2) {
                     await new Promise((res, rej) => {
@@ -62,7 +122,8 @@
                 cv.style.display = 'block';
                 const blob = await new Promise(res => cv.toBlob(res, 'image/jpeg', 0.9));
                 if (!blob) throw new Error('Gagal ambil frame (canvas kosong)');
-                out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span> Kirim frame ke AI… (±10–20 detik)';
+                meta.textContent = 'kirim frame ke vision…';
+                out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span>';
                 const fd = new FormData();
                 fd.append('file', blob, 'frame.jpg');
                 fd.append('options', JSON.stringify({ maxTags: 10 }));
@@ -77,9 +138,12 @@
                         result = m ? m[1].trim() : j.raw.slice(0, 700);
                     } else if (j.code) throw new Error(j.message || j.code);
                 } catch (e) { if (e.message && !e.message.includes('JSON') && !e.message.includes('Unexpected')) throw e; }
-                out.textContent = 'Hasil analisis frame:\n\n' + result;
+                meta.textContent = 'AI real-time mengalir…';
+                out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span>';
+                await streamElaborate(result);
             } catch (e) {
                 out.textContent = 'Error: ' + e.message;
+                meta.textContent = '';
             } finally {
                 go.disabled = false;
             }

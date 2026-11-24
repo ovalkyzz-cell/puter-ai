@@ -9,6 +9,7 @@
         :root { --c: #a78bfa; }
         #log .call { color: var(--accent-2); font-weight: 700; }
         #log .meta { color: var(--muted); font-size: 12px; font-family: var(--mono); }
+        #log .live { white-space: pre-wrap; min-height: 1.2em; }
         #log { min-height: 140px; }
     </style>
 </head>
@@ -21,7 +22,7 @@
             </div>
             <div>
                 <h1>Shared Context <span class="badge">GRATIS</span></h1>
-                <p class="note" style="margin:4px 0 0">System prompt panjang dipakai ulang di 3 call · tanpa login</p>
+                <p class="note" style="margin:4px 0 0">System prompt panjang · 3 call streaming real-time · tanpa login</p>
             </div>
         </div>
 
@@ -47,28 +48,57 @@ POLICIES:
 5 - Privasi: Tidak kirim data ke server kami sendiri; request langsung ke provider gratis.
 6 - Support: Buka halaman fitur dari menu Toolkit untuk panduan tiap tools.
 7 - Error: Jika network gagal, coba lagi. Jika pop-up muncul, abaikan — aplikasi ini tidak butuh login.
-8 - Bahasa: Balas pengguna dalam bahasa Indonesia yang jelas dan ringkas.`;
+8 - Bahasa: Balas pengguna dalam bahasa Indonesia yang jelas dan ringkas.
+9 - Real-time: Semua jawaban mengalir per karakter (streaming).`;
 
         const log = document.getElementById('log');
         const run = document.getElementById('run');
         const clear = document.getElementById('clear');
         const HISTORY = [{ role: 'system', content: SYSTEM }];
 
-        async function ask(q) {
+        async function askStream(q, liveEl) {
             const messages = [...HISTORY, { role: 'user', content: q }];
             const t0 = performance.now();
+            let first = null;
             const res = await fetch('https://text.pollinations.ai/openai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ model: 'openai-fast', messages, normalize: true }),
+                body: JSON.stringify({ model: 'openai-fast', stream: true, messages, normalize: true }),
             });
-            const ms = Math.round(performance.now() - t0);
+            const msTtfb = Math.round(performance.now() - t0);
             if (!res.ok) {
                 if (res.status === 402) throw new Error('rate');
                 throw new Error('API ' + res.status);
             }
-            const data = await res.json();
-            return { text: data.choices?.[0]?.message?.content || '(empty)', ms, cached: data.usage?.prompt_tokens_details?.cached_tokens };
+            const reader = res.body.getReader();
+            const dec = new TextDecoder();
+            let buf = '', full = '', n = 0;
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buf += dec.decode(value, { stream: true });
+                const lines = buf.split('\n');
+                buf = lines.pop() || '';
+                for (const line of lines) {
+                    const t = line.trim();
+                    if (!t.startsWith('data:')) continue;
+                    const d = t.slice(5).trim();
+                    if (d === '[DONE]') continue;
+                    try {
+                        const j = JSON.parse(d);
+                        const c = j.choices?.[0]?.delta?.content || '';
+                        if (c) {
+                            if (first == null) first = Math.round(performance.now() - t0);
+                            full += c;
+                            n++;
+                            if (liveEl) liveEl.textContent = full;
+                        }
+                    } catch {}
+                }
+            }
+            const ms = Math.round(performance.now() - t0);
+            if (!full) throw new Error('empty');
+            return { text: full, ms, first, ttfb: msTtfb, chunks: n };
         }
 
         function line(s, cls) {
@@ -76,6 +106,7 @@ POLICIES:
             if (cls) d.className = cls;
             d.textContent = s;
             log.appendChild(d);
+            return d;
         }
 
         clear.onclick = () => { log.textContent = ''; };
@@ -87,10 +118,11 @@ POLICIES:
             let failed = false;
             for (let i = 0; i < qs.length; i++) {
                 line(`Call ${i + 1} (shared system prompt) — Q: ${qs[i]}`, 'call');
+                const live = line('', 'live');
                 try {
-                    const r = await ask(qs[i]);
-                    line(r.text);
-                    line(`(${r.ms}ms${r.cached != null ? ', cached=' + r.cached : ''})`, 'meta');
+                    const r = await askStream(qs[i], live);
+                    live.textContent = r.text;
+                    line(`(${r.chunks} chunks real-time · first ${r.first}ms · total ${r.ms}ms)`, 'meta');
                     line('');
                     if (i < qs.length - 1) {
                         line('Menunggu slot rate limit gratis…', 'meta');
@@ -102,7 +134,7 @@ POLICIES:
                     break;
                 }
             }
-            if (!failed) line('Selesai — 3 jawaban dari konteks kebijakan yang sama.', 'call');
+            if (!failed) line('Selesai — 3 jawaban streaming dari konteks kebijakan yang sama.', 'call');
             run.disabled = false;
         };
     </script>
