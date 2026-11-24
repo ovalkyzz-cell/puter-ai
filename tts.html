@@ -22,7 +22,7 @@
             </div>
             <div>
                 <h1>Text-to-Speech <span class="badge">GRATIS · TANPA LOGIN</span></h1>
-                <p class="note" style="margin:4px 0 0">Web Speech API · tanpa API key · tanpa balance · tanpa limit</p>
+                <p class="note" style="margin:4px 0 0">Web Speech API · gratis selamanya · tanpa API key · tanpa limit</p>
             </div>
         </div>
 
@@ -36,7 +36,7 @@
 
         <div class="card">
             <h2>Engine suara</h2>
-            <textarea id="text-input">Halo! Ini text-to-speech gratis tanpa login dan tanpa balance. Selamat datang di aplikasi AI kami.</textarea>
+            <textarea id="text-input">Halo! Ini text-to-speech gratis tanpa login. Selamat datang di aplikasi AI kami.</textarea>
             <div class="grid">
                 <div class="field">
                     <label>Bahasa</label>
@@ -131,7 +131,7 @@
             const v = voices.find(x => x.name === voiceSel.value);
             if (v) u.voice = v;
             u.onstart = () => { setButtons('speaking'); setStatus('Memutar…\n' + text.slice(0, 120) + (text.length > 120 ? '…' : '')); };
-            u.onend = () => { setButtons('idle'); setStatus('Selesai. ✓ Gratis, tanpa balance.'); };
+            u.onend = () => { setButtons('idle'); setStatus('Selesai. ✓ Gratis selamanya.'); };
             u.onerror = (e) => {
                 setButtons('idle');
                 setStatus(e.error === 'synthesis-failed'
