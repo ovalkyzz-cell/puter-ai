@@ -4,33 +4,40 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat Dasar</title>
-    <style>
-        body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; background: #0b0b0d; color: #e8e8ea; }
-        h1 { font-size: 22px; }
-        #out { white-space: pre-wrap; background: #1a1a1f; border: 1px solid #26262d; border-radius: 12px; padding: 16px; min-height: 80px; margin-top: 16px; line-height: 1.6; }
-        button { padding: 10px 20px; background: #7c5cff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
-        button:disabled { opacity: .5; }
-        select { padding: 8px 10px; background: #1a1a1f; color: #e8e8ea; border: 1px solid #26262d; border-radius: 8px; margin-left: 8px; }
-        .note { color: #8a8a93; font-size: 13px; }
-        a { color: #9d86ff; }
-    </style>
+    <link rel="stylesheet" href="features.css">
+    <style>:root { --c: #7c5cff; }</style>
 </head>
 <body>
-    <h1>◆ Chat Dasar</h1>
-    <p class="note">100% gratis · tanpa login · non-streaming</p>
-    <button id="go">Tanya: What is life?</button>
-    <select id="model">
-        <option value="openai-fast" selected>openai-fast</option>
-        <option value="openai">openai</option>
-    </select>
-    <div id="out">Menunggu…</div>
-    <p><a href="index.html">← Chat utama</a></p>
+    <a class="home-pill" href="index.html">◆ Nexus</a>
+    <div class="wrap">
+        <div class="page-head">
+            <div class="page-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><circle cx="8.5" cy="10" r="1" fill="currentColor"/><circle cx="12" cy="10" r="1" fill="currentColor"/><circle cx="15.5" cy="10" r="1" fill="currentColor"/></svg>
+            </div>
+            <div>
+                <h1>Chat Dasar <span class="badge">GRATIS</span></h1>
+                <p class="note" style="margin:4px 0 0">Non-streaming · tanpa login · tanpa API key</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Quick ask</h2>
+            <button id="go">Tanya: What is life?</button>
+            <select id="model" style="max-width:220px">
+                <option value="openai-fast" selected>openai-fast</option>
+                <option value="openai">openai</option>
+            </select>
+            <div id="out">Menunggu…</div>
+        </div>
+
+        <a class="back" href="index.html">← Chat utama</a>
+    </div>
     <script>
         const out = document.getElementById('out');
         const go = document.getElementById('go');
         go.onclick = async () => {
             go.disabled = true;
-            out.textContent = 'Memanggil AI…';
+            out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span>';
             try {
                 const model = document.getElementById('model').value;
                 const res = await fetch('https://text.pollinations.ai/openai', {
@@ -42,7 +49,6 @@
                     }),
                 });
                 if (!res.ok) {
-                    const t = await res.text();
                     if (res.status === 402) throw new Error('Rate limit — tunggu ±45 detik.');
                     throw new Error('API ' + res.status);
                 }

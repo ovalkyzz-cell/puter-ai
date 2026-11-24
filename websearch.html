@@ -3,40 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web Search + AI — Tanpa Login</title>
+    <title>Web Search + AI</title>
+    <link rel="stylesheet" href="features.css">
     <style>
-        body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; background: #0b0b0d; color: #e8e8ea; }
-        h1 { font-size: 22px; }
-        input, textarea { width: 100%; padding: 10px 12px; background: #1a1a1f; border: 1px solid #26262d; border-radius: 8px; color: #e8e8ea; font-size: 14px; margin-bottom: 10px; box-sizing: border-box; }
-        button { padding: 10px 20px; background: #7c5cff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
-        button:disabled { opacity: .5; }
-        #out { white-space: pre-wrap; background: #1a1a1f; border: 1px solid #26262d; border-radius: 12px; padding: 16px; min-height: 80px; margin-top: 12px; line-height: 1.6; }
-        .note { color: #8a8a93; font-size: 13px; }
-        a { color: #9d86ff; }
-        #src { color: #8a8a93; font-size: 12px; margin-top: 8px; word-break: break-all; }
+        :root { --c: #34d399; }
+        #src { color: var(--muted); font-size: 12px; margin-top: 8px; word-break: break-all; }
     </style>
 </head>
 <body>
-    <h1>◆ Web Search + Ringkas AI</h1>
-    <p class="note">Tanpa login · Ambil halaman live via r.jina.ai lalu diringkas Pollinations</p>
-    <label>URL yang akan dibaca:</label>
-    <input id="url" value="https://docs.puter.com/user-pays-model/" />
-    <label>Pertanyaan:</label>
-    <input id="q" value="Summarize what the User-Pays Model is, in 3 sentences." />
-    <button id="go">Fetch + Ringkas</button>
-    <div id="out">Isi URL lalu klik tombol.</div>
-    <div id="src"></div>
-    <p><a href="index.html">← Kembali</a></p>
+    <a class="home-pill" href="index.html">◆ Nexus</a>
+    <div class="wrap">
+        <div class="page-head">
+            <div class="page-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
+            </div>
+            <div>
+                <h1>Web Fetch + AI <span class="badge">GRATIS</span></h1>
+                <p class="note" style="margin:4px 0 0">r.jina.ai live fetch · ringkas via Pollinations · tanpa login</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Baca & ringkas halaman</h2>
+            <label>URL yang akan dibaca</label>
+            <input id="url" value="https://docs.puter.com/user-pays-model/" />
+            <label>Pertanyaan</label>
+            <input id="q" value="Summarize what the User-Pays Model is, in 3 sentences." />
+            <button id="go">Fetch + Ringkas</button>
+            <div id="out">Isi URL lalu klik tombol.</div>
+            <div id="src"></div>
+        </div>
+
+        <a class="back" href="index.html">← Kembali</a>
+    </div>
     <script>
         const out = document.getElementById('out');
         const src = document.getElementById('src');
         const go = document.getElementById('go');
-
         go.onclick = async () => {
             go.disabled = true;
             const url = document.getElementById('url').value.trim();
             const q = document.getElementById('q').value.trim();
-            out.textContent = 'Mengambil halaman…';
+            out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span> Mengambil halaman…';
             src.textContent = '';
             try {
                 const pageRes = await fetch('https://r.jina.ai/' + url);
@@ -44,8 +52,7 @@
                 let page = await pageRes.text();
                 if (page.length > 6000) page = page.slice(0, 6000) + '\n\n[truncated]';
                 src.textContent = 'Sumber: ' + url + ' (' + page.length + ' chars)';
-
-                out.textContent = 'Merangkum dengan AI…';
+                out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span> Merangkum dengan AI…';
                 const aiRes = await fetch('https://text.pollinations.ai/openai', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -58,9 +65,8 @@
                     }),
                 });
                 if (!aiRes.ok) {
-                    const t = await aiRes.text();
-                    if (aiRes.status === 402) throw new Error('Rate limit AI — tunggu ±45 detik (fetch halaman sudah berhasil).');
-                    throw new Error('AI ' + aiRes.status + ': ' + t.slice(0, 150));
+                    if (aiRes.status === 402) throw new Error('Rate limit AI — tunggu ±45 detik.');
+                    throw new Error('AI ' + aiRes.status);
                 }
                 const data = await aiRes.json();
                 out.textContent = data.choices?.[0]?.message?.content || JSON.stringify(data).slice(0, 400);

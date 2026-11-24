@@ -4,98 +4,79 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text-to-Speech — Gratis</title>
+    <link rel="stylesheet" href="features.css">
     <style>
-        body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; background: #0b0b0d; color: #e8e8ea; }
-        h1 { font-size: 22px; }
-        .note { color: #8a8a93; font-size: 13px; }
-        .note b { color: #9d86ff; }
-        textarea {
-            width: 100%; height: 110px; padding: 12px;
-            background: #1a1a1f; border: 1px solid #26262d; border-radius: 10px;
-            color: #e8e8ea; font-size: 15px; box-sizing: border-box; margin-bottom: 14px;
-            font-family: inherit;
-        }
+        :root { --c: #818cf8; }
+        #text-input { min-height: 110px; font-size: 15px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 14px; }
-        .field label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: #8a8a93; margin-bottom: 5px; }
-        select, input[type=range] { width: 100%; box-sizing: border-box; }
-        select { padding: 10px 12px; background: #1a1a1f; color: #e8e8ea; border: 1px solid #26262d; border-radius: 8px; font-size: 14px; }
-        .val { font-size: 12px; color: #9d86ff; }
-        .btns { display: flex; gap: 10px; flex-wrap: wrap; }
-        button {
-            padding: 13px 26px; background: #7c5cff; color: #fff; border: none;
-            border-radius: 10px; cursor: pointer; font-weight: 600; font-size: 15px;
-        }
-        button:disabled { opacity: .5; cursor: not-allowed; }
-        button.secondary { background: #2a2a33; color: #ccc; }
-        button.danger { background: #5a2a2a; color: #ffb0b0; }
-        .status {
-            margin-top: 16px; padding: 12px 14px; background: #1a1a1f;
-            border: 1px solid #26262d; border-radius: 10px; color: #8a8a93;
-            font-size: 13px; min-height: 44px; white-space: pre-wrap;
-        }
-        .presets { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
-        .presets button { font-size: 13px; padding: 7px 12px; background: #20202a; color: #ccc; }
-        .presets button:hover { border-color: #7c5cff; }
-        a { color: #9d86ff; }
-        .badge { display: inline-block; background: #1f6f43; color: #b8f5d4; font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 700; margin-left: 8px; vertical-align: middle; }
+        textarea { width: 100%; margin-bottom: 12px; }
+        input[type=range] { width: 100%; }
     </style>
 </head>
 <body>
-    <h1>◆ Text-to-Speech <span class="badge">GRATIS · TANPA LOGIN</span></h1>
-    <p class="note">
-        Web Speech API browser — <b>benar-benar gratis</b>, tanpa API key, tanpa balance, tanpa limit, langsung jalan.
-    </p>
+    <a class="home-pill" href="index.html">◆ Nexus</a>
+    <div class="wrap">
+        <div class="page-head">
+            <div class="page-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></svg>
+            </div>
+            <div>
+                <h1>Text-to-Speech <span class="badge">GRATIS · TANPA LOGIN</span></h1>
+                <p class="note" style="margin:4px 0 0">Web Speech API · tanpa API key · tanpa balance · tanpa limit</p>
+            </div>
+        </div>
 
-    <div class="presets">
-        <button type="button" data-t="Hello! This is free text to speech.">EN: Hello</button>
-        <button type="button" data-t="Halo! Ini suara teks ke ucapan gratis.">ID: Halo</button>
-        <button type="button" data-t="Bonjour le monde!">FR: Bonjour</button>
-        <button type="button" data-t="Hola, ¿cómo estás?">ES: Hola</button>
-        <button type="button" data-t="Guten Tag, wie geht es Ihnen?">DE: Guten Tag</button>
+        <div class="presets">
+            <button type="button" data-t="Hello! This is free text to speech.">EN: Hello</button>
+            <button type="button" data-t="Halo! Ini suara teks ke ucapan gratis.">ID: Halo</button>
+            <button type="button" data-t="Bonjour le monde!">FR: Bonjour</button>
+            <button type="button" data-t="Hola, ¿cómo estás?">ES: Hola</button>
+            <button type="button" data-t="Guten Tag, wie geht es Ihnen?">DE: Guten Tag</button>
+        </div>
+
+        <div class="card">
+            <h2>Engine suara</h2>
+            <textarea id="text-input">Halo! Ini text-to-speech gratis tanpa login dan tanpa balance. Selamat datang di aplikasi AI kami.</textarea>
+            <div class="grid">
+                <div class="field">
+                    <label>Bahasa</label>
+                    <select id="lang">
+                        <option value="id-ID" selected>Indonesia</option>
+                        <option value="en-US">English (US)</option>
+                        <option value="en-GB">English (UK)</option>
+                        <option value="fr-FR">French</option>
+                        <option value="de-DE">German</option>
+                        <option value="es-ES">Spanish</option>
+                        <option value="it-IT">Italian</option>
+                        <option value="ja-JP">Japanese</option>
+                        <option value="ko-KR">Korean</option>
+                        <option value="ar-SA">Arabic</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>Voice</label>
+                    <select id="voice"><option value="">(default sistem)</option></select>
+                </div>
+                <div class="field">
+                    <label>Kecepatan: <span class="val" id="rate-val">1.0</span></label>
+                    <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
+                </div>
+                <div class="field">
+                    <label>Pitch: <span class="val" id="pitch-val">1.0</span></label>
+                    <input type="range" id="pitch" min="0.5" max="2" step="0.1" value="1">
+                </div>
+            </div>
+            <div class="btns">
+                <button id="play">▶ Putar</button>
+                <button id="pause" class="secondary" hidden>⏸ Jeda</button>
+                <button id="resume" class="secondary" hidden>▶ Lanjut</button>
+                <button id="stop" class="danger" hidden>■ Stop</button>
+            </div>
+            <div class="status" id="status">Siap. Klik Putar — suara keluar dari perangkatmu, 100% gratis.</div>
+        </div>
+
+        <a class="back" href="index.html">← Chat utama (balasan AI juga bisa 🔊)</a>
     </div>
-
-    <textarea id="text-input">Halo! Ini text-to-speech gratis tanpa login dan tanpa balance. Selamat datang di aplikasi AI kami.</textarea>
-
-    <div class="grid">
-        <div class="field">
-            <label>Bahasa</label>
-            <select id="lang">
-                <option value="id-ID" selected>Indonesia</option>
-                <option value="en-US">English (US)</option>
-                <option value="en-GB">English (UK)</option>
-                <option value="fr-FR">French</option>
-                <option value="de-DE">German</option>
-                <option value="es-ES">Spanish</option>
-                <option value="it-IT">Italian</option>
-                <option value="ja-JP">Japanese</option>
-                <option value="ko-KR">Korean</option>
-                <option value="ar-SA">Arabic</option>
-            </select>
-        </div>
-        <div class="field">
-            <label>Voice</label>
-            <select id="voice"><option value="">(default sistem)</option></select>
-        </div>
-        <div class="field">
-            <label>Kecepatan: <span class="val" id="rate-val">1.0</span></label>
-            <input type="range" id="rate" min="0.5" max="2" step="0.1" value="1">
-        </div>
-        <div class="field">
-            <label>Pitch: <span class="val" id="pitch-val">1.0</span></label>
-            <input type="range" id="pitch" min="0.5" max="2" step="0.1" value="1">
-        </div>
-    </div>
-
-    <div class="btns">
-        <button id="play">▶ Putar</button>
-        <button id="pause" class="secondary" hidden>⏸ Jeda</button>
-        <button id="resume" class="secondary" hidden>▶ Lanjut</button>
-        <button id="stop" class="danger" hidden>■ Stop</button>
-    </div>
-
-    <div class="status" id="status">Siap. Klik Putar — suara keluar dari perangkatmu, 100% gratis.</div>
-    <p><a href="index.html">← Chat utama (balasan AI juga bisa 🔊)</a></p>
-
     <script>
         const $ = (id) => document.getElementById(id);
         const textInput = $('text-input');
@@ -108,7 +89,6 @@
         const btnPause = $('pause');
         const btnResume = $('resume');
         const btnStop = $('stop');
-
         let voices = [];
         let speaking = false;
 
@@ -128,11 +108,7 @@
                 voiceSel.appendChild(o);
             }
             if ([...voiceSel.options].some(o => o.value === prev)) voiceSel.value = prev;
-            setStatus(
-                'Voice tersedia: ' + voices.length +
-                (match.length ? ' (' + match.length + ' cocok ' + langSel.value + ')' : ' (pakai default)') +
-                '\nGratis tanpa limit — putar sesering yang kamu mau.'
-            );
+            setStatus('Voice tersedia: ' + voices.length + (match.length ? ' (' + match.length + ' cocok ' + langSel.value + ')' : ' (default)') + '\nGratis tanpa limit — putar sesering yang kamu mau.');
         }
 
         function setButtons(state) {
@@ -154,16 +130,14 @@
             u.pitch = parseFloat(pitch.value);
             const v = voices.find(x => x.name === voiceSel.value);
             if (v) u.voice = v;
-
             u.onstart = () => { setButtons('speaking'); setStatus('Memutar…\n' + text.slice(0, 120) + (text.length > 120 ? '…' : '')); };
             u.onend = () => { setButtons('idle'); setStatus('Selesai. ✓ Gratis, tanpa balance.'); };
             u.onerror = (e) => {
                 setButtons('idle');
                 setStatus(e.error === 'synthesis-failed'
-                    ? 'Perangkat ini tidak punya output suara (common di server/headless). Di HP/laptop biasanya langsung jalan.'
+                    ? 'Perangkat ini tidak punya output suara (server/headless). Di HP/laptop langsung jalan.'
                     : 'Error: ' + e.error);
             };
-
             setButtons('speaking');
             speechSynthesis.speak(u);
         }
@@ -172,11 +146,9 @@
         btnPause.onclick = () => { speechSynthesis.pause(); setButtons('paused'); setStatus('Dijeda.'); };
         btnResume.onclick = () => { speechSynthesis.resume(); setButtons('speaking'); setStatus('Lanjut…'); };
         btnStop.onclick = () => { speechSynthesis.cancel(); setButtons('idle'); setStatus('Dihentikan.'); };
-
         rate.oninput = () => $('rate-val').textContent = parseFloat(rate.value).toFixed(1);
         pitch.oninput = () => $('pitch-val').textContent = parseFloat(pitch.value).toFixed(1);
         langSel.onchange = refreshVoices;
-
         document.querySelectorAll('.presets button').forEach(b => {
             b.onclick = () => { textInput.value = b.dataset.t; play(); };
         });

@@ -3,29 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vision — Tanpa Login</title>
+    <title>Vision — Analisis Gambar</title>
+    <link rel="stylesheet" href="features.css">
     <style>
-        body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; background: #0b0b0d; color: #e8e8ea; }
-        h1 { font-size: 22px; }
-        img { max-width: 320px; border-radius: 12px; display: block; margin: 16px 0; border: 1px solid #26262d; }
-        #out { white-space: pre-wrap; background: #1a1a1f; border: 1px solid #26262d; border-radius: 12px; padding: 16px; min-height: 60px; line-height: 1.6; }
-        button { padding: 10px 20px; background: #7c5cff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
-        button:disabled { opacity: .5; }
-        .note { color: #8a8a93; font-size: 13px; }
-        a { color: #9d86ff; }
-        input[type=file] { margin: 12px 0; color: #ccc; }
+        :root { --c: #f472b6; }
+        img#pic { max-width: 320px; border-radius: 12px; display: block; margin: 8px 0 14px; border: 1px solid var(--border); animation: imgIn .5s ease both; }
     </style>
 </head>
 <body>
-    <h1>◆ Vision — Analisis Gambar</h1>
-    <p class="note">Tanpa login · aiautotagging.com (Cloudflare Workers AI) · 500/hari</p>
-    <img id="pic" src="https://assets.puter.site/doge.jpeg" alt="doge" crossorigin="anonymous">
-    <div>
-        <input type="file" id="file" accept="image/*">
-        <button id="go">Analisis Gambar</button>
+    <a class="home-pill" href="index.html">◆ Nexus</a>
+    <div class="wrap">
+        <div class="page-head">
+            <div class="page-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+            </div>
+            <div>
+                <h1>Vision <span class="badge">GRATIS · 500/HARI</span></h1>
+                <p class="note" style="margin:4px 0 0">Analisis gambar via Cloudflare Workers AI · tanpa login</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Upload / pilih gambar</h2>
+            <img id="pic" src="https://assets.puter.site/doge.jpeg" alt="sample" crossorigin="anonymous">
+            <input type="file" id="file" accept="image/*">
+            <button id="go">Analisis Gambar</button>
+            <div id="out">Klik tombol untuk menganalisis gambar (atau upload sendiri).</div>
+        </div>
+
+        <a class="back" href="index.html">← Kembali</a>
     </div>
-    <div id="out">Klik tombol untuk menganalisis gambar di atas (atau upload gambar sendiri).</div>
-    <p><a href="index.html">← Kembali</a></p>
     <script>
         const out = document.getElementById('out');
         const pic = document.getElementById('pic');
@@ -67,7 +74,7 @@
 
         go.onclick = async () => {
             go.disabled = true;
-            out.textContent = 'Menganalisis… (±10–20 detik)';
+            out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span> Menganalisis… (±10–20 detik)';
             try {
                 const blob = currentBlob || await urlToBlob(pic.src.startsWith('blob:') ? pic.src : 'https://assets.puter.site/doge.jpeg');
                 const fd = new FormData();

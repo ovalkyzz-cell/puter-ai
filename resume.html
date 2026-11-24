@@ -3,38 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Resume Analyzer — Tanpa Login</title>
+    <title>Resume Analyzer</title>
+    <link rel="stylesheet" href="features.css">
     <style>
-        body { font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; padding: 20px; background: #0b0b0d; color: #e8e8ea; }
-        .container { border: 1px solid #26262d; padding: 20px; border-radius: 12px; background: #121215; }
-        h1 { font-size: 22px; }
-        p.note { color: #8a8a93; font-size: 13px; }
-        .upload-area { border: 2px dashed #3a3a44; padding: 40px; text-align: center; margin: 20px 0; border-radius: 8px; cursor: pointer; transition: border-color .3s; }
-        .upload-area:hover, .upload-area.dragover { border-color: #7c5cff; background: #1a1a1f; }
+        :root { --c: #5eead4; }
+        .upload-area {
+            border: 2px dashed rgba(94, 234, 212, .35);
+            padding: 40px;
+            text-align: center;
+            margin: 12px 0;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all .3s ease;
+            background: rgba(94, 234, 212, .03);
+        }
+        .upload-area:hover, .upload-area.dragover {
+            border-color: #5eead4;
+            background: rgba(94, 234, 212, .08);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(94, 234, 212, .12);
+        }
         input[type=file] { display: none; }
-        button { width: 100%; padding: 12px; background: #7c5cff; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 10px; font-weight: 600; }
-        button:disabled { background: #2a2a33; color: #666; cursor: not-allowed; }
-        #response { margin-top: 20px; padding: 15px; background: #1a1a1f; border-radius: 8px; display: none; white-space: pre-wrap; line-height: 1.6; border: 1px solid #26262d; }
-        .file-name { margin-top: 10px; font-style: italic; color: #8a8a93; }
-        a { color: #9d86ff; }
+        .file-name { margin-top: 8px; font-style: italic; color: var(--muted); font-size: 13px; }
+        #response { display: none; }
+        #response.show { display: block; animation: pageIn .4s ease both; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Resume Analyzer</h1>
-        <p class="note">Tanpa login · Upload <b>.txt / .md</b> (PDF/DOC tidak dibaca browser tanpa library) → analisis AI</p>
-
-        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-            <p>Klik atau drop file resume (TXT/MD)</p>
-            <input type="file" id="fileInput" accept=".txt,.md,.text" />
+    <a class="home-pill" href="index.html">◆ Nexus</a>
+    <div class="wrap">
+        <div class="page-head">
+            <div class="page-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
+            </div>
+            <div>
+                <h1>Resume Analyzer <span class="badge">GRATIS</span></h1>
+                <p class="note" style="margin:4px 0 0">Upload <b>.txt / .md</b> → analisis AI · tanpa login</p>
+            </div>
         </div>
 
-        <div class="file-name" id="fileName" style="display:none;"></div>
-        <button id="analyzeBtn" disabled>Analyze My Resume</button>
-        <div id="response"></div>
-        <p><a href="index.html">← Kembali</a></p>
-    </div>
+        <div class="card">
+            <h2>Upload resume</h2>
+            <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+                <p>Klik atau drop file resume (TXT/MD)</p>
+                <input type="file" id="fileInput" accept=".txt,.md,.text" />
+            </div>
+            <div class="file-name" id="fileName" style="display:none;"></div>
+            <button id="analyzeBtn" disabled>Analyze My Resume</button>
+            <div id="response" class="out"></div>
+        </div>
 
+        <a class="back" href="index.html">← Kembali</a>
+    </div>
     <script>
         let uploadedText = null;
         const fileInput = document.getElementById('fileInput');
@@ -74,6 +94,7 @@
             if (!uploadedText) return;
             analyzeBtn.disabled = true;
             analyzeBtn.textContent = 'Analyzing...';
+            response.classList.remove('show');
             response.style.display = 'none';
             try {
                 const res = await fetch('https://text.pollinations.ai/openai', {
@@ -89,11 +110,12 @@
                     }),
                 });
                 if (!res.ok) {
-                    const t = await res.text();
                     if (res.status === 402) throw new Error('Rate limit — tunggu ±45 detik lalu coba lagi.');
-                    throw new Error('API ' + res.status + ': ' + t.slice(0, 150));
+                    throw new Error('API ' + res.status);
                 }
                 response.style.display = 'block';
+                response.classList.add('show');
+                response.innerHTML = '<span class="cursor"></span>';
                 const reader = res.body.getReader();
                 const dec = new TextDecoder();
                 let buf = '', full = '';
@@ -118,6 +140,7 @@
                 if (!full) throw new Error('Respons kosong');
             } catch (error) {
                 response.style.display = 'block';
+                response.classList.add('show');
                 response.textContent = 'Error: ' + error.message;
             }
             analyzeBtn.disabled = false;

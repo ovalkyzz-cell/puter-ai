@@ -2,8 +2,8 @@ const SYSTEM_PROMPT = "You are a helpful assistant. Answer clearly and concisely
 const POLLINATIONS_URL = "https://text.pollinations.ai/openai";
 
 const MODELS = [
-    { id: "openai-fast", label: "openai-fast — gratis, tanpa login" },
-    { id: "openai", label: "openai — gratis, tanpa login" },
+    { id: "openai-fast", label: "openai-fast — gratis" },
+    { id: "openai", label: "openai — gratis" },
 ];
 
 const els = {
@@ -92,7 +92,7 @@ function msgNode(role, content, isError) {
         speak.type = 'button';
         speak.className = 'btn-speak';
         speak.title = 'Dengarkan';
-        speak.textContent = '🔊';
+        speak.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg> Dengarkan';
         speak.onclick = (e) => {
             e.stopPropagation();
             speechSynthesis.cancel();
@@ -125,6 +125,64 @@ function friendlyError(err) {
 
 function selectedModel() {
     return els.modelSelect.value || 'openai-fast';
+}
+
+// ===== Smooth typewriter: ketikan AI pelan-pelan, halus =====
+class SmoothTyper {
+    constructor(bubble, cursor) {
+        this.bubble = bubble;
+        this.cursor = cursor;
+        this.target = '';
+        this.shown = 0;
+        this.timer = null;
+        this.done = false;
+        this.chunks = 0;
+    }
+
+    push(partial) {
+        this.target = partial;
+        this.chunks++;
+        if (!this.timer) this._tick();
+    }
+
+    async _tick() {
+        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+        while (this.shown < this.target.length && !this.done) {
+            const remaining = this.target.length - this.shown;
+            // pelan-pelan: 1–3 karakter per langkah, jeda adaptif
+            const step = remaining > 80 ? 3 : remaining > 30 ? 2 : 1;
+            const delay = remaining > 200 ? 12 : remaining > 60 ? 22 : 34;
+            this.shown = Math.min(this.target.length, this.shown + step);
+            this.bubble.textContent = this.target.slice(0, this.shown);
+            if (this.cursor && this.cursor.parentNode === this.bubble) {
+                this.bubble.appendChild(this.cursor);
+            } else if (this.cursor) {
+                this.bubble.appendChild(this.cursor);
+            }
+            scrollBottom();
+            await sleep(delay);
+        }
+        this.timer = null;
+    }
+
+    async finish(finalText) {
+        this.target = finalText;
+        // kejar sampai habis
+        while (this.shown < this.target.length) {
+            await this._tick();
+        }
+        this.done = true;
+        if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+        // pastikan tampil penuh
+        this.bubble.textContent = finalText;
+        if (this.cursor && this.cursor.parentNode) this.cursor.remove();
+        return finalText;
+    }
+
+    abortShown() {
+        this.done = true;
+        return this.target.slice(0, this.shown);
+    }
 }
 
 // Backend gratis Pollinations — tanpa login, streaming
@@ -198,36 +256,58 @@ async function send(text) {
     avatar.textContent = 'AI';
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
-    const cursor = document.createElement('span');
-    cursor.className = 'cursor';
-    bubble.appendChild(cursor);
+
+    // indikator berpikir
+    const thinking = document.createElement('span');
+    thinking.className = 'thinking';
+    thinking.innerHTML = '<i></i><i></i><i></i>';
+    bubble.appendChild(thinking);
     bubbleWrap.append(avatar, bubble);
     els.messages.appendChild(bubbleWrap);
     scrollBottom();
+
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    const typer = new SmoothTyper(bubble, cursor);
+    let gotFirst = false;
 
     currentAbort = new AbortController();
 
     try {
         const onChunk = (partial) => {
-            bubble.textContent = partial;
-            bubble.appendChild(cursor);
-            scrollBottom();
+            if (!gotFirst) {
+                gotFirst = true;
+                thinking.remove();
+                bubble.appendChild(cursor);
+                setStatus('mengetik…', true);
+            }
+            typer.push(partial);
             setStatus('streaming…', true);
         };
 
         const full = await streamPollinations(history, onChunk, currentAbort.signal, model);
 
         if (!full) throw new Error('Respons kosong dari model');
+        await typer.finish(full);
         chat.messages.push({ role: 'assistant', content: full });
         save();
         setStatus('siap', false);
     } catch (err) {
         const msg = friendlyError(err);
-        if (err?.name === 'AbortError' && bubble.textContent.trim()) {
-            chat.messages.push({ role: 'assistant', content: bubble.textContent });
-            save();
+        typer.done = true;
+        if (err?.name === 'AbortError') {
+            const partial = typer.abortShown() || thinking.textContent;
+            if (partial && partial !== '…') {
+                bubble.textContent = partial;
+                chat.messages.push({ role: 'assistant', content: partial });
+                save();
+            } else {
+                bubbleWrap.remove();
+            }
             setStatus('dihentikan', false);
         } else {
+            thinking.remove();
+            if (cursor.parentNode) cursor.remove();
             bubble.textContent = 'Error: ' + msg;
             bubbleWrap.classList.add('error');
             chat.messages.push({ role: 'assistant', content: 'Error: ' + msg, error: true });

@@ -3,36 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Speed Test — Tanpa Login</title>
+    <title>Speed Test</title>
+    <link rel="stylesheet" href="features.css">
     <style>
-        body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; background: #0b0b0d; color: #e8e8ea; }
-        h1 { font-size: 22px; }
-        .note { color: #8a8a93; font-size: 13px; }
-        button { padding: 10px 20px; background: #7c5cff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
-        button:disabled { opacity: .5; }
-        #out { white-space: pre-wrap; background: #1a1a1f; border: 1px solid #26262d; border-radius: 12px; padding: 16px; min-height: 80px; margin-top: 12px; line-height: 1.7; }
-        .big { font-size: 32px; font-weight: 700; color: #9d86ff; }
-        table { border-collapse: collapse; margin-top: 10px; width: 100%; }
-        td, th { border: 1px solid #26262d; padding: 8px 10px; text-align: left; font-size: 14px; }
-        a { color: #9d86ff; }
+        :root { --c: #f87171; }
+        .big { font-size: 36px; font-weight: 800; color: var(--c); font-family: var(--mono); letter-spacing: -1px; }
+        table { border-collapse: collapse; margin-top: 12px; width: 100%; }
+        td, th { border: 1px solid var(--border); padding: 9px 12px; text-align: left; font-size: 13.5px; }
+        th { background: rgba(255,255,255,.04); color: var(--muted); text-transform: uppercase; font-size: 11px; letter-spacing: .6px; }
     </style>
 </head>
 <body>
-    <h1>◆ Speed Test (latency + TTFB + stream)</h1>
-    <p class="note">Tanpa login · Mengukur waktu respons Pollinations (pengganti serviceSpeed Puter)</p>
-    <button id="go">Jalankan Tes</button>
-    <div id="out">Klik tombol untuk mengukur.</div>
-    <p><a href="index.html">← Kembali</a></p>
+    <a class="home-pill" href="index.html">◆ Nexus</a>
+    <div class="wrap">
+        <div class="page-head">
+            <div class="page-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21a9 9 0 1 1 9-9"/><path d="M12 12l5-5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg>
+            </div>
+            <div>
+                <h1>Speed Test <span class="badge">GRATIS</span></h1>
+                <p class="note" style="margin:4px 0 0">Latency · TTFB · stream first-chunk · tanpa login</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Ukur respons Pollinations</h2>
+            <button id="go">Jalankan Tes</button>
+            <div id="out">Klik tombol untuk mengukur.</div>
+        </div>
+
+        <a class="back" href="index.html">← Kembali</a>
+    </div>
     <script>
         const out = document.getElementById('out');
         const go = document.getElementById('go');
-
         go.onclick = async () => {
             go.disabled = true;
-            out.textContent = 'Menjalankan…';
+            out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span> Menjalankan…';
             const rows = [];
             try {
-                // 1) non-stream latency
                 let t0 = performance.now();
                 const res = await fetch('https://text.pollinations.ai/openai', {
                     method: 'POST',
@@ -44,18 +53,17 @@
                 });
                 const ttfb = performance.now() - t0;
                 if (!res.ok) {
-                    const t = await res.text();
                     if (res.status === 402) throw new Error('Rate limit — tunggu ±45 detik.');
-                    throw new Error('API ' + res.status + ': ' + t.slice(0, 120));
+                    throw new Error('API ' + res.status);
                 }
                 const data = await res.json();
                 const total1 = performance.now() - t0;
                 const content = data.choices?.[0]?.message?.content || '';
                 rows.push(['Non-stream total', Math.round(total1) + ' ms']);
+                rows.push(['TTFB-ish', Math.round(ttfb) + ' ms']);
                 rows.push(['Model', data.model || 'openai-fast']);
                 rows.push(['Chars', String(content.length)]);
 
-                // 2) stream first-chunk latency
                 t0 = performance.now();
                 const sres = await fetch('https://text.pollinations.ai/openai', {
                     method: 'POST',

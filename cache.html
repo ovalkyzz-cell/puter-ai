@@ -3,26 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Context Caching — Tanpa Login</title>
+    <title>Shared Context</title>
+    <link rel="stylesheet" href="features.css">
     <style>
-        body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; background: #0b0b0d; color: #e8e8ea; }
-        h1 { font-size: 22px; }
-        .note { color: #8a8a93; font-size: 13px; }
-        button { padding: 10px 16px; background: #7c5cff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin: 4px 4px 4px 0; }
-        button:disabled { opacity: .5; }
-        #log { background: #1a1a1f; border: 1px solid #26262d; border-radius: 12px; padding: 16px; min-height: 120px; margin-top: 12px; white-space: pre-wrap; line-height: 1.6; font-size: 14px; }
-        a { color: #9d86ff; }
-        .call { color: #9d86ff; font-weight: 600; }
-        .meta { color: #8a8a93; font-size: 12px; }
+        :root { --c: #a78bfa; }
+        #log .call { color: var(--accent-2); font-weight: 700; }
+        #log .meta { color: var(--muted); font-size: 12px; font-family: var(--mono); }
+        #log { min-height: 140px; }
     </style>
 </head>
 <body>
-    <h1>◆ Shared System Context (3 Calls)</h1>
-    <p class="note">Tanpa login · System prompt panjang dipakai ulang di 3 pertanyaan — model tetap paham kebijakan Acme. (Pollinations gratis tidak mengekspos cache_control, tapi konteks bersama tetap jalan.)</p>
-    <button id="run">Jalankan 3 Call</button>
-    <button id="clear" style="background:#2a2a33">Clear</button>
-    <div id="log">Klik "Jalankan 3 Call".</div>
-    <p><a href="index.html">← Kembali</a></p>
+    <a class="home-pill" href="index.html">◆ Nexus</a>
+    <div class="wrap">
+        <div class="page-head">
+            <div class="page-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            </div>
+            <div>
+                <h1>Shared Context <span class="badge">GRATIS</span></h1>
+                <p class="note" style="margin:4px 0 0">System prompt panjang dipakai ulang di 3 call · tanpa login</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>3 call · 1 konteks</h2>
+            <div class="btns">
+                <button id="run">Jalankan 3 Call</button>
+                <button id="clear" class="secondary">Clear</button>
+            </div>
+            <div id="log">Klik "Jalankan 3 Call".</div>
+        </div>
+
+        <a class="back" href="index.html">← Kembali</a>
+    </div>
     <script>
         const SYSTEM = `You are an expert customer support agent for Acme Corporation.
 COMPANY: Founded 2010, HQ San Francisco. 50,000+ customers, 120 countries. Products: AcmeCloud, AcmeBrain, AcmeFlow, AcmeShield.
@@ -51,9 +64,8 @@ POLICIES:
             });
             const ms = Math.round(performance.now() - t0);
             if (!res.ok) {
-                const t = await res.text();
                 if (res.status === 402) throw new Error('rate');
-                throw new Error('API ' + res.status + ': ' + t.slice(0, 120));
+                throw new Error('API ' + res.status);
             }
             const data = await res.json();
             return { text: data.choices?.[0]?.message?.content || '(empty)', ms, cached: data.usage?.prompt_tokens_details?.cached_tokens };
@@ -71,18 +83,14 @@ POLICIES:
         run.onclick = async () => {
             run.disabled = true;
             log.textContent = '';
-            const qs = [
-                'How do I get a refund?',
-                'What are your API rate limits?',
-                'What is your data retention policy?',
-            ];
+            const qs = ['How do I get a refund?', 'What are your API rate limits?', 'What is your data retention policy?'];
             let failed = false;
             for (let i = 0; i < qs.length; i++) {
                 line(`Call ${i + 1} (shared system prompt) — Q: ${qs[i]}`, 'call');
                 try {
                     const r = await ask(qs[i]);
                     line(r.text);
-                    line(`(${r.ms}ms${r.cached != null ? ', cached_tokens=' + r.cached : ''})`, 'meta');
+                    line(`(${r.ms}ms${r.cached != null ? ', cached=' + r.cached : ''})`, 'meta');
                     line('');
                     if (i < qs.length - 1) {
                         line('Menunggu slot rate limit gratis…', 'meta');

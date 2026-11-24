@@ -3,77 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Image Gen — Gratis Tanpa Login</title>
-    <style>
-        body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; background: #0b0b0d; color: #e8e8ea; }
-        h1 { font-size: 22px; }
-        .note { color: #8a8a93; font-size: 13px; }
-        .note b { color: #9d86ff; }
-        input, select { width: 100%; padding: 10px 12px; background: #1a1a1f; border: 1px solid #26262d; border-radius: 8px; color: #e8e8ea; font-size: 14px; margin-bottom: 10px; box-sizing: border-box; }
-        button { padding: 10px 20px; background: #7c5cff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-right: 8px; margin-bottom: 8px; }
-        button:disabled { opacity: .5; }
-        .row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
-        .card { flex: 1; min-width: 280px; }
-        .card h3 { font-size: 14px; color: #9d86ff; margin-bottom: 8px; }
-        .card img { width: 100%; border-radius: 12px; border: 1px solid #26262d; min-height: 120px; background: #1a1a1f; }
-        #status { color: #8a8a93; font-size: 13px; margin-top: 10px; }
-        a { color: #9d86ff; }
-        .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .badge { display: inline-block; background: #1f6f43; color: #b8f5d4; font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 700; margin-left: 8px; }
-        @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
-    </style>
+    <title>Image Gen — Gratis</title>
+    <link rel="stylesheet" href="features.css">
+    <style>:root { --c: #fb923c; }</style>
 </head>
 <body>
-    <h1>◆ Generate + Edit Gambar <span class="badge">GRATIS · TANPA LOGIN</span></h1>
-    <p class="note">
-        <b>image.pollinations.ai</b> — tanpa API key, tanpa balance, tanpa daftar.
-        Satu gambar per ±45 detik (limit tier gratis).
-    </p>
-
-    <label>Prompt gambar:</label>
-    <input id="p1" value="A simple infographic about photosynthesis, clean flat design" />
-
-    <div class="grid2">
-        <div>
-            <label>Ukuran</label>
-            <select id="size">
-                <option value="768" selected>768 × 768</option>
-                <option value="1024">1024 × 1024</option>
-                <option value="1280x720">1280 × 720 (landscape)</option>
-                <option value="720x1280">720 × 1280 (portrait)</option>
-            </select>
+    <a class="home-pill" href="index.html">◆ Nexus</a>
+    <div class="wrap">
+        <div class="page-head">
+            <div class="page-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            </div>
+            <div>
+                <h1>Image Gen <span class="badge">GRATIS · TANPA LOGIN</span></h1>
+                <p class="note" style="margin:4px 0 0">image.pollinations.ai · tanpa API key · 1 gambar / ±45 dtk</p>
+            </div>
         </div>
-        <div>
-            <label>Seed (kosongkan = acak)</label>
-            <input id="seed" placeholder="mis. 42" />
+
+        <div class="card">
+            <h2>Prompt</h2>
+            <label>Prompt gambar</label>
+            <input id="p1" value="A simple infographic about photosynthesis, clean flat design" />
+            <div class="grid2">
+                <div>
+                    <label>Ukuran</label>
+                    <select id="size">
+                        <option value="768" selected>768 × 768</option>
+                        <option value="1024">1024 × 1024</option>
+                        <option value="1280x720">1280 × 720 (landscape)</option>
+                        <option value="720x1280">720 × 1280 (portrait)</option>
+                    </select>
+                </div>
+                <div>
+                    <label>Seed (kosong = acak)</label>
+                    <input id="seed" placeholder="mis. 42" />
+                </div>
+            </div>
+            <label>Edit prompt (opsional)</label>
+            <input id="p2" value="Translate all text in this image to Spanish. Keep everything else the same." />
+            <div class="btns" style="margin-top:6px">
+                <button id="gen">1. Generate</button>
+                <button id="edit" class="secondary" disabled>2. Edit / varian</button>
+            </div>
+            <div id="status">Langkah 1 dulu.</div>
         </div>
-    </div>
 
-    <label>Edit prompt (opsional):</label>
-    <input id="p2" value="Translate all text in this image to Spanish. Keep everything else the same." />
+        <div class="row">
+            <div class="card"><h3>Hasil generate</h3><img id="img1" class="preview" alt="generated" /></div>
+            <div class="card"><h3>Hasil edit</h3><img id="img2" class="preview" alt="edited" /></div>
+        </div>
 
-    <button id="gen">1. Generate</button>
-    <button id="edit" disabled>2. Edit / varian</button>
-    <div id="status">Langkah 1 dulu.</div>
-    <div class="row">
-        <div class="card"><h3>Hasil generate</h3><img id="img1" alt="generated" /></div>
-        <div class="card"><h3>Hasil edit</h3><img id="img2" alt="edited" /></div>
+        <a class="back" href="index.html">← Kembali</a>
     </div>
-    <p><a href="index.html">← Kembali</a></p>
     <script>
         const img1 = document.getElementById('img1');
         const img2 = document.getElementById('img2');
         const status = document.getElementById('status');
         const gen = document.getElementById('gen');
         const edit = document.getElementById('edit');
-        let url1 = '';
 
         function sizeParts() {
             const v = document.getElementById('size').value;
-            if (v.includes('x')) {
-                const [w, h] = v.split('x');
-                return { w: +w, h: +h };
-            }
+            if (v.includes('x')) { const [w, h] = v.split('x'); return { w: +w, h: +h }; }
             return { w: +v, h: +v };
         }
 
@@ -98,7 +89,7 @@
             status.textContent = 'Generate… (bisa 10–30 detik, gratis tanpa login)';
             try {
                 const seed = document.getElementById('seed').value || (Date.now() % 100000);
-                url1 = imageUrl(document.getElementById('p1').value, seed);
+                const url1 = imageUrl(document.getElementById('p1').value, seed);
                 await loadImage(url1);
                 img1.src = url1;
                 status.textContent = 'Generate OK ✓ Tunggu ±45 detik sebelum langkah 2 (limit gratis).';
@@ -120,7 +111,7 @@
                 const url = imageUrl(p2, seed);
                 await loadImage(url);
                 img2.src = url;
-                status.textContent = 'Selesai ✓ Catatan: tier gratis = text-to-image (bukan image-to-image penuh).';
+                status.textContent = 'Selesai ✓ Catatan: tier gratis = text-to-image.';
             } catch (e) {
                 status.textContent = 'Error: ' + e.message;
             } finally {

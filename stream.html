@@ -4,31 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Streaming Real-time</title>
-    <style>
-        body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; background: #0b0b0d; color: #e8e8ea; }
-        h1 { font-size: 22px; }
-        .note { color: #8a8a93; font-size: 13px; }
-        button { padding: 10px 20px; background: #7c5cff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
-        button:disabled { opacity: .5; }
-        select { padding: 8px 10px; background: #1a1a1f; color: #e8e8ea; border: 1px solid #26262d; border-radius: 8px; margin-left: 8px; }
-        #out { white-space: pre-wrap; background: #1a1a1f; border: 1px solid #26262d; border-radius: 12px; padding: 16px; min-height: 120px; margin-top: 16px; line-height: 1.6; }
-        .cursor { display: inline-block; width: 7px; height: 15px; background: #7c5cff; animation: b 1s steps(1) infinite; }
-        @keyframes b { 50% { opacity: 0; } }
-        .meta { color: #8a8a93; font-size: 12px; margin-top: 8px; }
-        a { color: #9d86ff; }
-    </style>
+    <link rel="stylesheet" href="features.css">
+    <style>:root { --c: #38bdf8; }</style>
 </head>
 <body>
-    <h1>◆ Streaming Real-time</h1>
-    <p class="note">100% gratis · tanpa login · tanpa API key</p>
-    <button id="go">Stream sekarang</button>
-    <select id="model">
-        <option value="openai-fast" selected>openai-fast</option>
-        <option value="openai">openai</option>
-    </select>
-    <div id="out"><span class="cursor"></span></div>
-    <div class="meta" id="meta"></div>
-    <p><a href="index.html">← Chat utama</a></p>
+    <a class="home-pill" href="index.html">◆ Nexus</a>
+    <div class="wrap">
+        <div class="page-head">
+            <div class="page-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
+            </div>
+            <div>
+                <h1>Streaming Real-time <span class="badge">GRATIS</span></h1>
+                <p class="note" style="margin:4px 0 0">Ketikan AI mengalir per karakter · tanpa login</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>Live stream</h2>
+            <div class="btns" style="margin-bottom:12px">
+                <button id="go">Stream sekarang</button>
+                <select id="model" style="max-width:200px;margin-bottom:0">
+                    <option value="openai-fast" selected>openai-fast</option>
+                    <option value="openai">openai</option>
+                </select>
+            </div>
+            <div id="out"><span class="cursor"></span></div>
+            <div class="meta" id="meta"></div>
+        </div>
+
+        <a class="back" href="index.html">← Chat utama</a>
+    </div>
     <script>
         const out = document.getElementById('out');
         const go = document.getElementById('go');
@@ -42,14 +48,13 @@
                 body: JSON.stringify({ model, stream: true, messages: [{ role: 'user', content: prompt }] }),
             });
             if (!res.ok) {
-                const t = await res.text();
                 if (res.status === 402) throw new Error('Rate limit — tunggu ±45 detik.');
                 throw new Error('API ' + res.status);
             }
             const reader = res.body.getReader();
             const dec = new TextDecoder();
             let buf = '', full = '', n = 0;
-            const onChunk = () => {
+            const paint = () => {
                 out.textContent = full;
                 const cur = document.createElement('span');
                 cur.className = 'cursor';
@@ -69,7 +74,7 @@
                     try {
                         const j = JSON.parse(d);
                         const c = j.choices?.[0]?.delta?.content || '';
-                        if (c) { full += c; n++; onChunk(); }
+                        if (c) { full += c; n++; paint(); }
                     } catch {}
                 }
             }
@@ -78,7 +83,7 @@
 
         go.onclick = async () => {
             go.disabled = true;
-            out.innerHTML = '<span class="cursor"></span>';
+            out.innerHTML = '<span class="thinking"><i></i><i></i><i></i></span>';
             const model = modelSel.value;
             meta.textContent = 'memulai…';
             const t0 = performance.now();
@@ -86,6 +91,7 @@
                 const prompt = 'Write a short essay on AI in 2 paragraphs.';
                 const r = await streamFree(prompt, model);
                 if (!r.full) throw new Error('Respons kosong');
+                out.textContent = r.full;
                 meta.textContent = 'Selesai · ' + r.n + ' chunks · ' + ((performance.now() - t0) / 1000).toFixed(1) + 's · ' + model;
             } catch (e) {
                 out.textContent = 'Error: ' + (e?.message || e?.error || e);
