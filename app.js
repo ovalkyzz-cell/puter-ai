@@ -1,7 +1,7 @@
 const SYSTEM_PROMPT = "You are a helpful assistant. Answer clearly and concisely. Reply in the user's language.";
 const POLLINATIONS_URL = "https://text.pollinations.ai/openai";
 
-// Tier free: Pollinations tanpa login. Tier puter: Mistral via Puter.js (login sekali saat dipakai).
+// Tier free: Pollinations tanpa login. Tier mistral: tampil di daftar saja — tanpa Puter/login/balance.
 const MODELS = [
     { id: "openai-fast", label: "openai-fast", tier: "free", hint: "GPT-OSS · cepat" },
     { id: "openai", label: "openai", tier: "free", hint: "alias openai-fast" },
@@ -57,14 +57,14 @@ let selectedModelId = 'openai-fast';
 
 function load() {
     try {
-        chats = JSON.parse(localStorage.getItem('puter-ai-chats') || '[]');
+        chats = JSON.parse(localStorage.getItem('nexus-chats') || '[]');
     } catch { chats = []; }
     if (!chats.length) createChat(false);
     activeId = chats[0].id;
 }
 
 function save() {
-    localStorage.setItem('puter-ai-chats', JSON.stringify(chats));
+    localStorage.setItem('nexus-chats', JSON.stringify(chats));
 }
 
 function createChat(switchTo = true) {
@@ -172,7 +172,7 @@ function renderModelMenu() {
 
     const groups = [
         { key: 'free', title: 'Gratis · tanpa login', icon: '⚡' },
-        { key: 'mistral', title: 'Mistral · Puter.js', icon: '◆' },
+        { key: 'mistral', title: 'Mistral · daftar model', icon: '◆' },
     ];
 
     for (const g of groups) {
@@ -190,7 +190,7 @@ function renderModelMenu() {
             opt.innerHTML =
                 '<span class="m-dot ' + (m.tier === 'free' ? 'is-free' : 'is-mistral') + '"></span>' +
                 '<span class="m-opt-main"><span class="m-opt-label"></span><span class="m-opt-hint"></span></span>' +
-                (m.tier === 'free' ? '<span class="m-tag free">free</span>' : '<span class="m-tag mistral">puter</span>');
+                (m.tier === 'free' ? '<span class="m-tag free">free</span>' : '<span class="m-tag mistral">mistral</span>');
             opt.querySelector('.m-opt-label').textContent = m.label;
             opt.querySelector('.m-opt-hint').textContent = m.hint;
             opt.onclick = () => pickModel(m.id);
@@ -202,7 +202,7 @@ function renderModelMenu() {
 function syncModelTrigger() {
     const m = modelMeta(selectedModelId);
     els.mName.textContent = m.label;
-    els.mBadge.textContent = m.tier === 'free' ? 'free' : 'puter';
+    els.mBadge.textContent = m.tier === 'free' ? 'free' : 'mistral';
     els.mBadge.className = 'm-badge ' + (m.tier === 'free' ? 'is-free' : 'is-mistral');
     els.mDot.className = 'm-dot ' + (m.tier === 'free' ? 'is-free' : 'is-mistral');
     els.modelTrigger.title = m.id;
@@ -214,7 +214,11 @@ function pickModel(id) {
     closeModelMenu();
     renderModelMenu();
     const m = modelMeta(id);
-    setStatus(m.tier === 'free' ? 'model: ' + m.label + ' · gratis' : 'model: ' + m.label + ' · Puter', false);
+    if (m.tier === 'free') {
+        setStatus('model: ' + m.label + ' · gratis', false);
+    } else {
+        setStatus('model: ' + m.label + ' · pilih free untuk balas instan', false);
+    }
 }
 
 function openModelMenu() {
@@ -329,47 +333,26 @@ async function streamPollinations(messages, onChunk, signal, model) {
     return full;
 }
 
-// Backend Puter (Mistral dll) — pola tutorial: stream + for await + part?.text
-async function streamPuter(messages, onChunk, model) {
-    // messages array → (messages, testMode, options)
-    const response = await puter.ai.chat(messages, false, { model, stream: true });
-    let full = '';
-    for await (const part of response) {
-        if (part && (part.type === 'error' || part.error)) {
-            throw new Error(part.message || (part.error?.message) || 'stream error');
-        }
-        const chunk = part?.text;
-        if (chunk) {
-            full += chunk;
-            onChunk(full);
-        }
-    }
-    return full;
-}
-
-async function ensurePuterAuth() {
-    try {
-        if (window.puter && puter.auth && puter.auth.isSignedIn()) return;
-    } catch {}
-    setStatus('login Puter…', true);
-    await puter.auth.signIn();
-}
-
 async function send(text) {
     if (busy) return;
     const chat = activeChat();
     const model = selectedModel();
     const puterMode = isPuterModel(model);
 
-    // Puter/Mistral → login sekali dulu dari konteks klik (pop-up tidak diblokir)
+    // Mistral hanya tampil di daftar — jangan buka Puter/login (anti pop-up balance)
     if (puterMode) {
-        try {
-            await ensurePuterAuth();
-        } catch (err) {
-            pushError(chat, friendlyError(err));
-            setStatus('siap', false);
-            return;
+        chat.messages.push({ role: 'user', content: text });
+        if (chat.messages.length === 1) {
+            chat.title = text.slice(0, 40) + (text.length > 40 ? '…' : '');
         }
+        const note = 'Model "' + modelMeta(model).label + '" hanya tampil di daftar. Pilih openai-fast / openai untuk chat gratis instan — tanpa login, tanpa biaya.';
+        chat.messages.push({ role: 'assistant', content: note, error: false });
+        save();
+        renderHistory();
+        renderMessages();
+        setStatus('pilih model free', false);
+        els.input.focus();
+        return;
     }
 
     chat.messages.push({ role: 'user', content: text });
@@ -383,7 +366,7 @@ async function send(text) {
     busy = true;
     els.sendBtn.disabled = true;
     els.abortBtn.hidden = false;
-    setStatus(puterMode ? modelMeta(model).label + ' berpikir…' : 'berpikir…', true);
+    setStatus('berpikir…', true);
 
     const history = [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -426,9 +409,7 @@ async function send(text) {
             setStatus('streaming…', true);
         };
 
-        const full = puterMode
-            ? await streamPuter(history, onChunk, model)
-            : await streamPollinations(history, onChunk, currentAbort.signal, model);
+        const full = await streamPollinations(history, onChunk, currentAbort.signal, model);
 
         if (!full) throw new Error('Respons kosong dari model');
         await typer.finish(full);
