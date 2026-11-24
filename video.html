@@ -133,7 +133,12 @@
                 let result = text;
                 try {
                     const j = JSON.parse(text);
-                    if (j.raw) {
+                    if (Array.isArray(j.tags) && j.tags.length) {
+                        result = j.tags.slice(0, 10).map(t => {
+                            const conf = t.confidence != null ? ` (${Math.round(t.confidence * 100)}%)` : '';
+                            return '- ' + (t.label || t.name || '') + conf;
+                        }).join('\n');
+                    } else if (j.raw) {
                         const m = j.raw.match(/Image description:\s*([\s\S]+?)(?:\n\nHere is my approach|\n```|$)/i);
                         result = m ? m[1].trim() : j.raw.slice(0, 700);
                     } else if (j.code) throw new Error(j.message || j.code);

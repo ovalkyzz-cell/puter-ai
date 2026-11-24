@@ -77,6 +77,12 @@
         function parseVision(respText) {
             try {
                 const j = JSON.parse(respText);
+                if (Array.isArray(j.tags) && j.tags.length) {
+                    return j.tags.slice(0, 10).map(t => {
+                        const conf = t.confidence != null ? ` (${Math.round(t.confidence * 100)}%)` : '';
+                        return '- ' + (t.label || t.name || '') + conf;
+                    }).join('\n');
+                }
                 if (j.raw) {
                     const m = j.raw.match(/Image description:\s*([\s\S]+?)(?:\n\nHere is my approach|\n```|$)/i);
                     if (m) return m[1].trim();
@@ -85,6 +91,7 @@
                     return j.raw.split('\n').filter(l => l.trim() && !l.includes('```')).slice(0, 6).join('\n').slice(0, 600);
                 }
                 if (j.error || j.code) throw new Error(j.message || j.code);
+                if (j.description) return String(j.description);
                 return JSON.stringify(j, null, 2).slice(0, 600);
             } catch (e) {
                 if (e.message && !e.message.includes('JSON')) throw e;
