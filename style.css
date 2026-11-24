@@ -150,7 +150,7 @@ body {
 
 .btn-new:active { transform: translateY(0) scale(.98); }
 
-.model-box { padding: 12px 16px 8px; }
+.model-box { padding: 12px 16px 8px; position: relative; z-index: 30; }
 .model-box label {
     display: flex;
     align-items: center;
@@ -177,27 +177,226 @@ body {
     50% { opacity: .35; }
 }
 
-.model-box select {
+/* ===== Model menu (custom dropdown) ===== */
+.model-menu { position: relative; }
+
+.model-trigger {
     width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 9px;
     padding: 10px 12px;
     background: var(--panel-2);
     color: var(--text);
     border: 1px solid var(--border-strong);
-    border-radius: 10px;
+    border-radius: 11px;
     font-size: 13px;
-    outline: none;
+    font-family: inherit;
+    font-weight: 600;
     cursor: pointer;
-    transition: border-color .2s, box-shadow .2s;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b8b9a' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 12px center;
+    transition: border-color .25s, box-shadow .25s, transform .2s;
+    text-align: left;
 }
 
-.model-box select:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 3px rgba(124, 92, 255, .2);
+.model-trigger:hover {
+    border-color: rgba(124, 92, 255, .45);
+    transform: translateY(-1px);
 }
+
+.model-menu.open .model-trigger {
+    border-color: rgba(124, 92, 255, .65);
+    box-shadow: 0 0 0 3px rgba(124, 92, 255, .18);
+}
+
+.model-trigger .m-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    letter-spacing: .2px;
+}
+
+.m-chev {
+    color: var(--muted);
+    transition: transform .3s cubic-bezier(.22, 1, .36, 1);
+    flex-shrink: 0;
+}
+
+.model-menu.open .m-chev { transform: rotate(180deg); }
+
+.m-dot {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: box-shadow .3s, transform .3s;
+}
+
+.m-dot.is-free {
+    background: var(--green);
+    box-shadow: 0 0 8px rgba(52, 211, 153, .7);
+}
+
+.m-dot.is-mistral {
+    background: linear-gradient(135deg, #ff8a3d, #ff5c1a);
+    box-shadow: 0 0 8px rgba(255, 122, 40, .65);
+}
+
+.model-menu.open .m-dot { transform: scale(1.25); }
+
+.m-badge {
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: .7px;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 99px;
+    flex-shrink: 0;
+}
+
+.m-badge.is-free {
+    background: rgba(52, 211, 153, .14);
+    color: #6ee7b7;
+    border: 1px solid rgba(52, 211, 153, .35);
+}
+
+.m-badge.is-mistral {
+    background: rgba(255, 122, 40, .14);
+    color: #ffb088;
+    border: 1px solid rgba(255, 122, 40, .4);
+}
+
+/* Panel */
+.model-panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    max-height: min(52vh, 440px);
+    overflow-y: auto;
+    background: linear-gradient(180deg, rgba(22, 22, 32, .97), rgba(14, 14, 22, .98));
+    border: 1px solid var(--border-strong);
+    border-radius: 14px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, .55), 0 0 0 1px rgba(124, 92, 255, .12);
+    padding: 8px;
+    z-index: 50;
+    animation: panelIn .28s cubic-bezier(.22, 1, .36, 1) both;
+    backdrop-filter: blur(18px);
+}
+
+@keyframes panelIn {
+    from { opacity: 0; transform: translateY(-8px) scale(.97); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.m-group {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 10px 8px 6px;
+    position: sticky;
+    top: -8px;
+    background: rgba(16, 16, 24, .95);
+    backdrop-filter: blur(8px);
+    z-index: 1;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+    border-radius: 8px 8px 0 0;
+}
+
+.m-group-ic { font-size: 11px; }
+
+.m-group-free { color: var(--green); }
+.m-group-mistral { color: #ff9a5c; }
+
+.m-opt {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .18s ease;
+    text-align: left;
+    margin-bottom: 2px;
+    animation: fadeUp .3s ease both;
+}
+
+.m-opt:hover {
+    background: rgba(124, 92, 255, .12);
+    border-color: rgba(124, 92, 255, .28);
+    transform: translateX(3px);
+}
+
+.m-opt.active {
+    background: linear-gradient(90deg, rgba(124, 92, 255, .22), rgba(124, 92, 255, .06));
+    border-color: rgba(124, 92, 255, .45);
+    box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.m-opt-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.m-opt-label {
+    font-weight: 650;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: .15px;
+}
+
+.m-opt-hint {
+    font-size: 10.5px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.m-tag {
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .6px;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 99px;
+    flex-shrink: 0;
+}
+
+.m-tag.free {
+    background: rgba(52, 211, 153, .12);
+    color: #6ee7b7;
+    border: 1px solid rgba(52, 211, 153, .3);
+}
+
+.m-tag.mistral {
+    background: rgba(255, 122, 40, .12);
+    color: #ffb088;
+    border: 1px solid rgba(255, 122, 40, .35);
+}
+
+/* warna dot di opsi */
+.m-opt .m-dot.is-free { background: var(--green); box-shadow: 0 0 6px rgba(52, 211, 153, .55); }
+.m-opt .m-dot.is-mistral { background: linear-gradient(135deg, #ff8a3d, #ff5c1a); box-shadow: 0 0 6px rgba(255, 122, 40, .5); }
+
+.model-panel::-webkit-scrollbar { width: 5px; }
+.model-panel::-webkit-scrollbar-thumb { background: rgba(124, 92, 255, .35); border-radius: 99px; }
 
 .history {
     flex: 1;

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Chat — Gratis Tanpa Login</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://js.puter.com/v2/"></script>
 </head>
 <body>
     <div class="app">
@@ -31,8 +32,16 @@
             </div>
 
             <div class="model-box">
-                <label for="modelSelect">Model Neural</label>
-                <select id="modelSelect"></select>
+                <label>Model AI</label>
+                <div class="model-menu" id="modelMenu">
+                    <button type="button" class="model-trigger" id="modelTrigger" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="m-dot" id="mDot"></span>
+                        <span class="m-name" id="mName">openai-fast</span>
+                        <span class="m-badge" id="mBadge">free</span>
+                        <svg class="m-chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+                    </button>
+                    <div class="model-panel" id="modelPanel" hidden role="listbox"></div>
+                </div>
             </div>
 
             <div class="history" id="history"></div>
