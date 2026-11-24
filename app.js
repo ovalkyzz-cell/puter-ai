@@ -1,10 +1,33 @@
 const SYSTEM_PROMPT = "You are a helpful assistant. Answer clearly and concisely. Reply in the user's language.";
 const POLLINATIONS_URL = "https://text.pollinations.ai/openai";
 
-// 100% gratis — tanpa login, tanpa biaya, tanpa API key
+// Tier free: Pollinations tanpa login. Tier puter: Mistral via Puter.js (login sekali saat dipakai).
 const MODELS = [
     { id: "openai-fast", label: "openai-fast", tier: "free", hint: "GPT-OSS · cepat" },
     { id: "openai", label: "openai", tier: "free", hint: "alias openai-fast" },
+
+    { id: "mistralai/mistral-large-4", label: "Mistral Large 4", tier: "mistral", hint: "complex tasks" },
+    { id: "mistralai/mistral-medium-2604", label: "Mistral Medium 3.5", tier: "mistral", hint: "agentic coding · 128B" },
+    { id: "mistralai/mistral-small-2603", label: "Mistral Small 2603", tier: "mistral", hint: "balanced" },
+    { id: "mistralai/ministral-14b-2512", label: "Ministral 14B", tier: "mistral", hint: "edge" },
+    { id: "mistralai/mistral-medium-3.1", label: "Mistral Medium 3.1", tier: "mistral", hint: "balanced" },
+    { id: "mistralai/voxtral-small-24b-2507", label: "Voxtral 24B", tier: "mistral", hint: "voice" },
+    { id: "mistralai/mistral-small-3.2-24b-instruct", label: "Mistral Small 3.2", tier: "mistral", hint: "24B instruct" },
+    { id: "mistralai/mistral-small-3.1-24b-instruct", label: "Mistral Small 3.1", tier: "mistral", hint: "24B instruct" },
+    { id: "mistralai/mistral-saba", label: "Mistral Saba", tier: "mistral", hint: "multilingual" },
+    { id: "mistralai/mistral-large-2512", label: "Mistral Large 2512", tier: "mistral", hint: "flagship" },
+    { id: "mistralai/ministral-3b", label: "Ministral 3B", tier: "mistral", hint: "light" },
+    { id: "mistralai/ministral-8b", label: "Ministral 8B", tier: "mistral", hint: "light" },
+    { id: "mistralai/ministral-3b-2512", label: "Ministral 3B 2512", tier: "mistral", hint: "light" },
+    { id: "mistralai/ministral-8b-2512", label: "Ministral 8B 2512", tier: "mistral", hint: "light" },
+    { id: "mistralai/pixtral-12b", label: "Pixtral 12B", tier: "mistral", hint: "vision" },
+    { id: "mistralai/mistral-large-2407", label: "Mistral Large 2407", tier: "mistral", hint: "classic large" },
+    { id: "mistralai/codestral-2508", label: "Codestral 2508", tier: "mistral", hint: "code specialist" },
+    { id: "mistralai/mistral-7b-instruct-v0.3", label: "Mistral 7B v0.3", tier: "mistral", hint: "fast" },
+    { id: "mistralai/mixtral-8x22b-instruct", label: "Mixtral 8x22B", tier: "mistral", hint: "MoE" },
+    { id: "mistralai/mistral-7b-instruct-v0.2", label: "Mistral 7B v0.2", tier: "mistral", hint: "fast" },
+    { id: "mistralai/mistral-tiny", label: "Mistral Tiny", tier: "mistral", hint: "tercepat" },
+    { id: "mistralai/mistral-7b-instruct", label: "Mistral 7B Instruct", tier: "mistral", hint: "classic" },
 ];
 
 const els = {
@@ -34,14 +57,14 @@ let selectedModelId = 'openai-fast';
 
 function load() {
     try {
-        chats = JSON.parse(localStorage.getItem('nexus-chats') || '[]');
+        chats = JSON.parse(localStorage.getItem('puter-ai-chats') || '[]');
     } catch { chats = []; }
     if (!chats.length) createChat(false);
     activeId = chats[0].id;
 }
 
 function save() {
-    localStorage.setItem('nexus-chats', JSON.stringify(chats));
+    localStorage.setItem('puter-ai-chats', JSON.stringify(chats));
 }
 
 function createChat(switchTo = true) {
@@ -134,43 +157,54 @@ function modelMeta(id) {
     return MODELS.find(m => m.id === id) || MODELS[0];
 }
 
+function isPuterModel(id) {
+    return modelMeta(id).tier !== 'free';
+}
+
 function selectedModel() {
     return selectedModelId || 'openai-fast';
 }
 
-// ===== Model menu (gratis saja) =====
+// ===== Model menu (dropdown kustom) =====
 function renderModelMenu() {
     const panel = els.modelPanel;
     panel.innerHTML = '';
 
-    const head = document.createElement('div');
-    head.className = 'm-group m-group-free';
-    head.innerHTML = '<span class="m-group-ic">⚡</span>Gratis · tanpa login';
-    panel.appendChild(head);
+    const groups = [
+        { key: 'free', title: 'Gratis · tanpa login', icon: '⚡' },
+        { key: 'mistral', title: 'Mistral · Puter.js', icon: '◆' },
+    ];
 
-    for (const m of MODELS) {
-        const opt = document.createElement('button');
-        opt.type = 'button';
-        opt.className = 'm-opt' + (m.id === selectedModelId ? ' active' : '');
-        opt.setAttribute('role', 'option');
-        opt.dataset.id = m.id;
-        opt.innerHTML =
-            '<span class="m-dot is-free"></span>' +
-            '<span class="m-opt-main"><span class="m-opt-label"></span><span class="m-opt-hint"></span></span>' +
-            '<span class="m-tag free">free</span>';
-        opt.querySelector('.m-opt-label').textContent = m.label;
-        opt.querySelector('.m-opt-hint').textContent = m.hint;
-        opt.onclick = () => pickModel(m.id);
-        panel.appendChild(opt);
+    for (const g of groups) {
+        const head = document.createElement('div');
+        head.className = 'm-group m-group-' + g.key;
+        head.innerHTML = '<span class="m-group-ic">' + g.icon + '</span>' + g.title;
+        panel.appendChild(head);
+
+        for (const m of MODELS.filter(x => x.tier === g.key)) {
+            const opt = document.createElement('button');
+            opt.type = 'button';
+            opt.className = 'm-opt' + (m.id === selectedModelId ? ' active' : '');
+            opt.setAttribute('role', 'option');
+            opt.dataset.id = m.id;
+            opt.innerHTML =
+                '<span class="m-dot ' + (m.tier === 'free' ? 'is-free' : 'is-mistral') + '"></span>' +
+                '<span class="m-opt-main"><span class="m-opt-label"></span><span class="m-opt-hint"></span></span>' +
+                (m.tier === 'free' ? '<span class="m-tag free">free</span>' : '<span class="m-tag mistral">puter</span>');
+            opt.querySelector('.m-opt-label').textContent = m.label;
+            opt.querySelector('.m-opt-hint').textContent = m.hint;
+            opt.onclick = () => pickModel(m.id);
+            panel.appendChild(opt);
+        }
     }
 }
 
 function syncModelTrigger() {
     const m = modelMeta(selectedModelId);
     els.mName.textContent = m.label;
-    els.mBadge.textContent = 'free';
-    els.mBadge.className = 'm-badge is-free';
-    els.mDot.className = 'm-dot is-free';
+    els.mBadge.textContent = m.tier === 'free' ? 'free' : 'puter';
+    els.mBadge.className = 'm-badge ' + (m.tier === 'free' ? 'is-free' : 'is-mistral');
+    els.mDot.className = 'm-dot ' + (m.tier === 'free' ? 'is-free' : 'is-mistral');
     els.modelTrigger.title = m.id;
 }
 
@@ -179,7 +213,8 @@ function pickModel(id) {
     syncModelTrigger();
     closeModelMenu();
     renderModelMenu();
-    setStatus('model: ' + modelMeta(id).label + ' · gratis', false);
+    const m = modelMeta(id);
+    setStatus(m.tier === 'free' ? 'model: ' + m.label + ' · gratis' : 'model: ' + m.label + ' · Puter', false);
 }
 
 function openModelMenu() {
@@ -195,7 +230,7 @@ function closeModelMenu() {
     els.modelMenu.classList.remove('open');
 }
 
-// ===== Smooth typewriter =====
+// ===== Smooth typewriter: ketikan AI pelan-pelan, halus =====
 class SmoothTyper {
     constructor(bubble, cursor) {
         this.bubble = bubble;
@@ -217,11 +252,16 @@ class SmoothTyper {
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
         while (this.shown < this.target.length && !this.done) {
             const remaining = this.target.length - this.shown;
+            // pelan-pelan: 1–3 karakter per langkah, jeda adaptif
             const step = remaining > 80 ? 3 : remaining > 30 ? 2 : 1;
             const delay = remaining > 200 ? 12 : remaining > 60 ? 22 : 34;
             this.shown = Math.min(this.target.length, this.shown + step);
             this.bubble.textContent = this.target.slice(0, this.shown);
-            if (this.cursor) this.bubble.appendChild(this.cursor);
+            if (this.cursor && this.cursor.parentNode === this.bubble) {
+                this.bubble.appendChild(this.cursor);
+            } else if (this.cursor) {
+                this.bubble.appendChild(this.cursor);
+            }
             scrollBottom();
             await sleep(delay);
         }
@@ -230,11 +270,13 @@ class SmoothTyper {
 
     async finish(finalText) {
         this.target = finalText;
+        // kejar sampai habis
         while (this.shown < this.target.length) {
             await this._tick();
         }
         this.done = true;
         if (this.timer) { clearTimeout(this.timer); this.timer = null; }
+        // pastikan tampil penuh
         this.bubble.textContent = finalText;
         if (this.cursor && this.cursor.parentNode) this.cursor.remove();
         return finalText;
@@ -287,10 +329,48 @@ async function streamPollinations(messages, onChunk, signal, model) {
     return full;
 }
 
+// Backend Puter (Mistral dll) — pola tutorial: stream + for await + part?.text
+async function streamPuter(messages, onChunk, model) {
+    // messages array → (messages, testMode, options)
+    const response = await puter.ai.chat(messages, false, { model, stream: true });
+    let full = '';
+    for await (const part of response) {
+        if (part && (part.type === 'error' || part.error)) {
+            throw new Error(part.message || (part.error?.message) || 'stream error');
+        }
+        const chunk = part?.text;
+        if (chunk) {
+            full += chunk;
+            onChunk(full);
+        }
+    }
+    return full;
+}
+
+async function ensurePuterAuth() {
+    try {
+        if (window.puter && puter.auth && puter.auth.isSignedIn()) return;
+    } catch {}
+    setStatus('login Puter…', true);
+    await puter.auth.signIn();
+}
+
 async function send(text) {
     if (busy) return;
     const chat = activeChat();
     const model = selectedModel();
+    const puterMode = isPuterModel(model);
+
+    // Puter/Mistral → login sekali dulu dari konteks klik (pop-up tidak diblokir)
+    if (puterMode) {
+        try {
+            await ensurePuterAuth();
+        } catch (err) {
+            pushError(chat, friendlyError(err));
+            setStatus('siap', false);
+            return;
+        }
+    }
 
     chat.messages.push({ role: 'user', content: text });
     if (chat.messages.length === 1) {
@@ -303,7 +383,7 @@ async function send(text) {
     busy = true;
     els.sendBtn.disabled = true;
     els.abortBtn.hidden = false;
-    setStatus('berpikir…', true);
+    setStatus(puterMode ? modelMeta(model).label + ' berpikir…' : 'berpikir…', true);
 
     const history = [
         { role: 'system', content: SYSTEM_PROMPT },
@@ -318,6 +398,7 @@ async function send(text) {
     const bubble = document.createElement('div');
     bubble.className = 'bubble';
 
+    // indikator berpikir
     const thinking = document.createElement('span');
     thinking.className = 'thinking';
     thinking.innerHTML = '<i></i><i></i><i></i>';
@@ -345,7 +426,9 @@ async function send(text) {
             setStatus('streaming…', true);
         };
 
-        const full = await streamPollinations(history, onChunk, currentAbort.signal, model);
+        const full = puterMode
+            ? await streamPuter(history, onChunk, model)
+            : await streamPollinations(history, onChunk, currentAbort.signal, model);
 
         if (!full) throw new Error('Respons kosong dari model');
         await typer.finish(full);
@@ -414,6 +497,7 @@ els.newChatBtn.addEventListener('click', () => {
     createChat(true);
 });
 
+// init model menu
 syncModelTrigger();
 renderModelMenu();
 
