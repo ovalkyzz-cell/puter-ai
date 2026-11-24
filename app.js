@@ -1,7 +1,7 @@
 const SYSTEM_PROMPT = "You are a helpful assistant. Answer clearly and concisely. Reply in the user's language.";
 const POLLINATIONS_URL = "https://text.pollinations.ai/openai";
 
-// Tier free: Pollinations tanpa login. Tier mistral: tampil di daftar saja — tanpa Puter/login/balance.
+// Tier free: Pollinations tanpa login. Tier mistral: tampil di daftar saja — tanpa SDK eksternal.
 const MODELS = [
     { id: "openai-fast", label: "openai-fast", tier: "free", hint: "GPT-OSS · cepat" },
     { id: "openai", label: "openai", tier: "free", hint: "alias openai-fast" },
@@ -339,7 +339,7 @@ async function send(text) {
     const model = selectedModel();
     const puterMode = isPuterModel(model);
 
-    // Mistral hanya tampil di daftar — jangan buka Puter/login (anti pop-up balance)
+    // Mistral hanya tampil di daftar — jangan panggil SDK eksternal (anti pop-up)
     if (puterMode) {
         chat.messages.push({ role: 'user', content: text });
         if (chat.messages.length === 1) {
