@@ -1,7 +1,7 @@
 const SYSTEM_PROMPT = "You are a helpful assistant. Answer clearly and concisely. Reply in the user's language.";
 const POLLINATIONS_URL = "https://text.pollinations.ai/openai";
 
-// 100% gratis — tanpa login, tanpa balance, tanpa API key
+// 100% gratis — tanpa login, tanpa biaya, tanpa API key
 const MODELS = [
     { id: "openai-fast", label: "openai-fast", tier: "free", hint: "GPT-OSS · cepat" },
     { id: "openai", label: "openai", tier: "free", hint: "alias openai-fast" },
