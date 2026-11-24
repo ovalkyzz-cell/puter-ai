@@ -4,24 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image Gen + Edit — Tanpa Login</title>
+    <script src="https://js.puter.com/v2/"></script>
     <style>
         body { font-family: system-ui, sans-serif; max-width: 720px; margin: 30px auto; padding: 0 16px; background: #0b0b0d; color: #e8e8ea; }
         h1 { font-size: 22px; }
+        h2 { font-size: 16px; margin-top: 32px; border-top: 1px solid #26262d; padding-top: 20px; }
         .note { color: #8a8a93; font-size: 13px; }
-        input { width: 100%; padding: 10px 12px; background: #1a1a1f; border: 1px solid #26262d; border-radius: 8px; color: #e8e8ea; font-size: 14px; margin-bottom: 10px; box-sizing: border-box; }
-        button { padding: 10px 20px; background: #7c5cff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-right: 8px; }
+        .note b { color: #9d86ff; }
+        input, select { width: 100%; padding: 10px 12px; background: #1a1a1f; border: 1px solid #26262d; border-radius: 8px; color: #e8e8ea; font-size: 14px; margin-bottom: 10px; box-sizing: border-box; }
+        button { padding: 10px 20px; background: #7c5cff; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-right: 8px; margin-bottom: 8px; }
         button:disabled { opacity: .5; }
+        button.secondary { background: #2a2a33; color: #ccc; }
         .row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; }
         .card { flex: 1; min-width: 280px; }
         .card h3 { font-size: 14px; color: #9d86ff; margin-bottom: 8px; }
         .card img { width: 100%; border-radius: 12px; border: 1px solid #26262d; min-height: 120px; background: #1a1a1f; }
         #status { color: #8a8a93; font-size: 13px; margin-top: 10px; }
         a { color: #9d86ff; }
+        .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .badge { display: inline-block; background: #1f6f43; color: #b8f5d4; font-size: 11px; padding: 2px 8px; border-radius: 99px; font-weight: 700; margin-left: 8px; }
+        .badge.opt { background: #5a4a1f; color: #ffe9a8; }
+        .gpt-img { max-width: 100%; border-radius: 12px; border: 1px solid #26262d; display: block; margin-top: 10px; min-height: 80px; }
+        @media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
     <h1>◆ Generate + Edit Gambar</h1>
-    <p class="note">Tanpa login · image.pollinations.ai · satu gambar per ±45 detik</p>
+    <p class="note">
+        <b>Gratis tanpa login:</b> image.pollinations.ai — satu gambar per ±45 detik.<br>
+        <b>GPT Image (opsional, login):</b> <code>puter.ai.txt2img()</code> pola tutorial — Flare cepat, Sunburst detail.
+    </p>
+    <h2>1. Gratis — Pollinations <span class="badge">TANPA LOGIN</span></h2>
     <label>Prompt gambar:</label>
     <input id="p1" value="A simple infographic about photosynthesis, clean flat design" />
     <label>Edit (translate etc):</label>
@@ -33,6 +46,42 @@
         <div class="card"><h3>Hasil generate</h3><img id="img1" alt="generated" /></div>
         <div class="card"><h3>Hasil edit</h3><img id="img2" alt="edited" /></div>
     </div>
+
+    <h2>2. GPT Image via Puter <span class="badge opt">LOGIN OPSIONAL</span></h2>
+    <p class="note">
+        Pola tutorial: <code>puter.ai.txt2img(prompt, { model, quality })</code> → element gambar.<br>
+        Flare = respons cepat · Sunburst = detail/akurasi tata letak · kualitas: low → max.
+    </p>
+    <label>Prompt GPT Image:</label>
+    <input id="gp" value="A serene Japanese garden with cherry blossoms" />
+    <div class="grid2">
+        <div>
+            <label>Model</label>
+            <select id="gmodel">
+                <option value="gpt-image-2.6-flare" selected>gpt-image-2.6-flare (cepat)</option>
+                <option value="gpt-image-2.6-sunburst">gpt-image-2.6-sunburst (detail)</option>
+                <option value="gpt-image-2.5-flare">gpt-image-2.5-flare</option>
+                <option value="gpt-image-2.5-sunburst">gpt-image-2.5-sunburst</option>
+                <option value="gpt-image-2">gpt-image-2</option>
+                <option value="gpt-image-1.5">gpt-image-1.5</option>
+                <option value="gemini-2.5-flash-image-preview">gemini-2.5-flash-image-preview</option>
+            </select>
+        </div>
+        <div>
+            <label>Kualitas</label>
+            <select id="gquality">
+                <option value="low" selected>low (tercepat)</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+                <option value="xhigh">xhigh</option>
+                <option value="max">max</option>
+            </select>
+        </div>
+    </div>
+    <button id="gptgen" class="secondary">▶ Generate GPT Image</button>
+    <div id="gstatus">Belum dibuat. Butuh login Puter saat pertama kali.</div>
+    <div id="gresult"></div>
+
     <p><a href="index.html">← Kembali</a></p>
     <script>
         const img1 = document.getElementById('img1');
@@ -88,6 +137,35 @@
                 status.textContent = 'Error: ' + e.message;
             } finally {
                 edit.disabled = false;
+            }
+        };
+
+        // ===== GPT Image — pola tutorial Puter =====
+        const gptgen = document.getElementById('gptgen');
+        const gstatus = document.getElementById('gstatus');
+        const gresult = document.getElementById('gresult');
+
+        gptgen.onclick = async () => {
+            const prompt = document.getElementById('gp').value.trim();
+            if (!prompt) { gstatus.textContent = 'Prompt kosong.'; return; }
+            const model = document.getElementById('gmodel').value;
+            const quality = document.getElementById('gquality').value;
+            gptgen.disabled = true;
+            gstatus.textContent = 'Generate ' + model + ' / ' + quality + '… (login Puter muncul sekali saja)';
+            try {
+                if (!puter.auth.isSignedIn()) {
+                    await puter.auth.signIn();
+                }
+                // Contoh 1 & 2 tutorial
+                const imageElement = await puter.ai.txt2img(prompt, { model, quality });
+                gresult.innerHTML = '';
+                imageElement.classList.add('gpt-img');
+                gresult.appendChild(imageElement);
+                gstatus.textContent = 'Selesai ✓ ' + model + ' · ' + quality;
+            } catch (e) {
+                gstatus.textContent = 'Error: ' + (e?.message || e?.error || e);
+            } finally {
+                gptgen.disabled = false;
             }
         };
     </script>
